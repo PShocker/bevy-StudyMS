@@ -73,7 +73,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 // println!("{:?}", tiles);
                 println!("{:?}", tiles["Resource"]["ResourceUrl"]);
                 let x = tiles["X"].as_f64().unwrap() as f32;
-                let y = tiles["Y"].as_f64().unwrap() as f32;
+                let y = -tiles["Y"].as_f64().unwrap() as f32;
                 let z = tiles["ID"].as_f64().unwrap() as f32;
                 // let z = compositeZIndex(tiles["Resource"]["Z"].as_i64().unwrap() as i32,tiles["ID"].as_i64().unwrap() as i32,0) as f32;
 
