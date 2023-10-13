@@ -41,31 +41,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn(Camera2dBundle::default());
 
-    // for value in res["Backs"].as_array().unwrap() {
-    //     println!("{}", value["Resource"]["ResourceUrl"]);
-    //     let x = value["X"].as_f64().unwrap() as f32;
-    //     let y = value["Y"].as_f64().unwrap() as f32;
-    //     let z = value["ID"].as_f64().unwrap() as f32;
-
-    //     let ox = value["Resource"]["OriginX"].as_f64().unwrap() as f32/value["Resource"]["Width"].as_f64().unwrap() as f32/2.0;
-    //     let oy = value["Resource"]["OriginY"].as_f64().unwrap() as f32/value["Resource"]["Height"].as_f64().unwrap() as f32/2.0;
-    //     println!("{} and {}", x, y);
-    //     commands.spawn(SpriteBundle {
-    //         texture: asset_server.load(
-    //             value["Resource"]["ResourceUrl"]
-    //                 .to_string()
-    //                 .replace("\"", ""),
-    //         ),
-    //         transform: Transform::from_xyz(x, y, z),
-    //         sprite: Sprite {
-    //             // anchor:bevy::sprite::Anchor::Custom(Vec2::new(ox,oy)),
-    //             ..default()
-    //         },
-    //         // transform: Transform::from_xyz(x, y, 0.0),
-    //         ..default()
-    //     });
-    // }
-
     for value in res["Layers"].as_array().unwrap() {
         // println!("{:?}", value);
         if value["Tiles"].as_array() != None {
@@ -100,8 +75,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                             .to_string()
                             .replace("\"", ""),
                     ),
-                    transform: Transform::from_translation(Vec3::new(x, y, z)),
-                    // transform: Transform::from_xyz(x, y, 0.0),
+                    transform: Transform::from_xyz(x, y, z),
                     sprite: Sprite {
                         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
                         ..default()
@@ -109,7 +83,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..default()
                 });
             }
-            break;
         }
     }
 }
