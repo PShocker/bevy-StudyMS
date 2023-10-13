@@ -6,7 +6,7 @@ use std::{
     fs,
 };
 
-fn compositeZIndex(z0: i32, z1: i32, z2: i32) -> i32 {
+fn composite_zindex(z0: i32, z1: i32, z2: i32) -> i32 {
     let scale = 1 << 10; // 1024
     let normalize = |mut v: i32| -> i32 {
         // -512 <= v <= 511
@@ -73,11 +73,27 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 // println!("{:?}", tiles);
                 println!("{:?}", tiles["Resource"]["ResourceUrl"]);
                 let x = tiles["X"].as_f64().unwrap() as f32;
-                let y = -tiles["Y"].as_f64().unwrap() as f32;
-                let z = tiles["ID"].as_f64().unwrap() as f32;
-                // let z = compositeZIndex(tiles["Resource"]["Z"].as_i64().unwrap() as i32,tiles["ID"].as_i64().unwrap() as i32,0) as f32;
+                let y = -tiles["Y"].as_f64().unwrap() as f32 + 320.0;
+                // let z = tiles["ID"].as_f64().unwrap() as f32;
+                let z = composite_zindex(
+                    tiles["Resource"]["Z"].as_i64().unwrap() as i32,
+                    tiles["ID"].as_i64().unwrap() as i32,
+                    0,
+                ) as f32
+                    / 100000000.0;
 
-                println!("{} and {}", x, y);
+                // let ox = tiles["Resource"]["OriginX"].as_f64().unwrap() as f32;
+                // let oy = tiles["Resource"]["OriginY"].as_f64().unwrap() as f32;
+
+                let ox = (tiles["Resource"]["OriginX"].as_f64().unwrap() as f32
+                    - tiles["Resource"]["Width"].as_f64().unwrap() as f32 / 2.0)
+                    / (tiles["Resource"]["Width"].as_f64().unwrap() as f32);
+
+                let oy = -(tiles["Resource"]["OriginY"].as_f64().unwrap() as f32
+                - tiles["Resource"]["Height"].as_f64().unwrap() as f32 / 2.0)
+                / (tiles["Resource"]["Height"].as_f64().unwrap() as f32);
+
+                println!("{} and {} and {}", ox, oy, z);
                 commands.spawn(SpriteBundle {
                     texture: asset_server.load(
                         tiles["Resource"]["ResourceUrl"]
@@ -87,6 +103,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     transform: Transform::from_translation(Vec3::new(x, y, z)),
                     // transform: Transform::from_xyz(x, y, 0.0),
                     sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
                         ..default()
                     },
                     ..default()
