@@ -6,16 +6,19 @@ use std::{
     fs,
 };
 
-fn composite_zindex(z0: i64, z1: i64, z2: i64) -> i64 {
+fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
     let scale = 1 << 10; // 1024
-    let normalize = |mut v: i64| -> i64 {
+    let normalize = |mut v: i128| -> i128 {
         // v = v.abs();
         v = v + scale / 2;
         v = max(0, min(v, scale - 1));
         return v;
     };
-    return normalize(z0) * scale * scale + normalize(z1) * scale + normalize(z2)
-        - 1024 * 1024 * 512;
+    return normalize(z) * scale * scale * scale
+        + normalize(z0) * scale * scale
+        + normalize(z1) * scale
+        + normalize(z2)
+        - 1024 * 1024 * 1024 * 512;
 }
 
 fn main() {
@@ -78,7 +81,11 @@ pub fn movement(
     }
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut textures: ResMut<Assets<Image>>,
+) {
     let path = "./assets/Map/Map/Map0/000010000.json";
     let data = fs::read_to_string(path).expect("Unable to read file");
     let res: serde_json::Value = serde_json::from_str(&data).unwrap();
@@ -86,10 +93,63 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // print!("{:?}\n", p);
 
     commands.spawn(Camera2dBundle::default());
-    
 
+    let mut i = 0;
     for value in res["Layers"].as_array().unwrap() {
         // println!("{:?}", value);
+        i += 1;
+
+        if value["Objs"].as_array() != None {
+            for objs in value["Objs"].as_array().unwrap() {
+                // println!("{:?}", tiles);
+                println!("{:?}", objs["Resource"]["ResourceUrl"]);
+                let x = objs["X"].as_f64().unwrap() as f32;
+                let y = -objs["Y"].as_f64().unwrap() as f32 + 330.0;
+                // let z = tiles["ID"].as_f64().unwrap() as f32;
+                let z = composite_zindex(
+                    i,
+                    objs["Resource"]["Z"].as_i64().unwrap() as i128,
+                    objs["ID"].as_i64().unwrap() as i128,
+                    0,
+                ) as f32
+                    / 1000000000.0;
+                // let ox = tiles["Resource"]["OriginX"].as_f64().unwrap() as f32;
+                // let oy = tiles["Resource"]["OriginY"].as_f64().unwrap() as f32;
+                
+                let mut texture_atlas_builder = TextureAtlasBuilder::default();
+                for frames in objs["Frames"].as_array().unwrap() {
+                    let r = asset_server.load(frames["ResourceUrl"].to_string().replace("\"", ""));
+                    texture_atlas_builder.add_texture(r.id(), r);
+                }
+
+                let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
+
+                let ox = (objs["Resource"]["OriginX"].as_f64().unwrap() as f32
+                    - objs["Resource"]["Width"].as_f64().unwrap() as f32 / 2.0)
+                    / (objs["Resource"]["Width"].as_f64().unwrap() as f32);
+
+                let oy = -(objs["Resource"]["OriginY"].as_f64().unwrap() as f32
+                    - objs["Resource"]["Height"].as_f64().unwrap() as f32 / 2.0)
+                    / (objs["Resource"]["Height"].as_f64().unwrap() as f32);
+
+                // println!("{} and {} and {}", x, y, z);
+                println!("{} and {}", objs["ID"].as_i64().unwrap(), z);
+                commands.spawn(SpriteBundle {
+                    texture: asset_server.load(
+                        objs["Resource"]["ResourceUrl"]
+                            .to_string()
+                            .replace("\"", ""),
+                    ),
+                    transform: Transform::from_xyz(x, y, z),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                        ..default()
+                    },
+                    ..default()
+                });
+            }
+        }
+
         if value["Tiles"].as_array() != None {
             for tiles in value["Tiles"].as_array().unwrap() {
                 // println!("{:?}", tiles);
@@ -98,12 +158,12 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 let y = -tiles["Y"].as_f64().unwrap() as f32 + 330.0;
                 // let z = tiles["ID"].as_f64().unwrap() as f32;
                 let z = composite_zindex(
-                    tiles["Resource"]["Z"].as_i64().unwrap() as i64,
-                    tiles["ID"].as_i64().unwrap() as i64,
+                    i,
+                    tiles["Resource"]["Z"].as_i64().unwrap() as i128,
+                    tiles["ID"].as_i64().unwrap() as i128,
                     0,
                 ) as f32
-                    / 100000.0;
-
+                    / 1000000000.0;
                 // let ox = tiles["Resource"]["OriginX"].as_f64().unwrap() as f32;
                 // let oy = tiles["Resource"]["OriginY"].as_f64().unwrap() as f32;
 
@@ -117,20 +177,19 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                 // println!("{} and {} and {}", x, y, z);
                 println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                commands
-                    .spawn(SpriteBundle {
-                        texture: asset_server.load(
-                            tiles["Resource"]["ResourceUrl"]
-                                .to_string()
-                                .replace("\"", ""),
-                        ),
-                        transform: Transform::from_xyz(x, y, z),
-                        sprite: Sprite {
-                            anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                            ..default()
-                        },
+                commands.spawn(SpriteBundle {
+                    texture: asset_server.load(
+                        tiles["Resource"]["ResourceUrl"]
+                            .to_string()
+                            .replace("\"", ""),
+                    ),
+                    transform: Transform::from_xyz(x, y, z),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
                         ..default()
-                    });
+                    },
+                    ..default()
+                });
             }
         }
     }
