@@ -4,7 +4,7 @@ use bevy::{prelude::*, window::WindowMode};
 use std::{
     cmp::{max, min},
     fs,
-    sync::Arc,
+    sync::Arc, ops::Index,
 };
 
 fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
@@ -48,8 +48,10 @@ fn main() {
         .run();
 }
 
-pub fn animation(query: Query<&AnimationSprite, With<Name>>) {
+pub fn animation(mut commands: Commands, query: Query<&AnimationSprite, With<Name>>) {
     for s in query.iter() {
+        let sprite=s.sprite[0].clone();
+        commands.spawn(sprite);
         // println!("{:?}", s.sprite);
     }
 }
@@ -150,9 +152,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                             ..default()
                         };
                         animationsprite.sprite.push(s);
-                        animationsprite.delay.push(frames["Delay"].as_i64().unwrap() as i32);
+                        animationsprite
+                            .delay
+                            .push(frames["Delay"].as_i64().unwrap() as i32);
                     }
-                    commands.spawn((animationsprite, Name("Entity 2".to_string())));
+                    commands.spawn((animationsprite, Name(i.to_string())));
                     // commands.
                 }
             }
