@@ -4,6 +4,7 @@ use bevy::{prelude::*, window::WindowMode};
 use std::{
     cmp::{max, min},
     fs,
+    sync::Arc,
 };
 
 fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
@@ -21,6 +22,14 @@ fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
         - 1024 * 1024 * 1024 * 512;
 }
 
+#[derive(Component)]
+pub struct AnimationSprite {
+    pub sprite: Vec<SpriteBundle>,
+    pub index: i32,
+}
+#[derive(Component)]
+pub struct Name(String);
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -34,7 +43,14 @@ fn main() {
         }))
         .add_systems(Startup, setup)
         .add_systems(Update, movement)
+        .add_systems(Update, animation)
         .run();
+}
+
+pub fn animation(query: Query<&AnimationSprite, With<Name>>) {
+    for s in query.iter() {
+        // println!("{:?}", s.sprite);
+    }
 }
 
 pub fn movement(
@@ -81,11 +97,7 @@ pub fn movement(
     }
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut textures: ResMut<Assets<Image>>,
-) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let path = "./assets/Map/Map/Map0/000010000.json";
     let data = fs::read_to_string(path).expect("Unable to read file");
     let res: serde_json::Value = serde_json::from_str(&data).unwrap();
@@ -101,59 +113,51 @@ fn setup(
 
         if value["Objs"].as_array() != None {
             for objs in value["Objs"].as_array().unwrap() {
-                // println!("{:?}", tiles);
-                println!("{:?}", objs["Resource"]["ResourceUrl"]);
                 let x = objs["X"].as_f64().unwrap() as f32;
                 let y = -objs["Y"].as_f64().unwrap() as f32 + 330.0;
-                // let z = tiles["ID"].as_f64().unwrap() as f32;
                 let z = composite_zindex(
                     i,
-                    objs["Resource"]["Z"].as_i64().unwrap() as i128,
+                    objs["Z"].as_i64().unwrap() as i128,
                     objs["ID"].as_i64().unwrap() as i128,
                     0,
                 ) as f32
                     / 1000000000.0;
-                // let ox = tiles["Resource"]["OriginX"].as_f64().unwrap() as f32;
-                // let oy = tiles["Resource"]["OriginY"].as_f64().unwrap() as f32;
-                
-                let mut texture_atlas_builder = TextureAtlasBuilder::default();
-                for frames in objs["Frames"].as_array().unwrap() {
-                    let r = asset_server.load(frames["ResourceUrl"].to_string().replace("\"", ""));
-                    texture_atlas_builder.add_texture(r.id(), r);
+
+                let mut animationsprite = AnimationSprite {
+                    index: 0,
+                    sprite: Vec::new(),
+                };
+                if objs["Resource"]["Frames"].as_array() != None {
+                    for frames in objs["Resource"]["Frames"].as_array().unwrap() {
+                        let ox = (frames["OriginX"].as_f64().unwrap() as f32
+                            - frames["Width"].as_f64().unwrap() as f32 / 2.0)
+                            / (frames["Width"].as_f64().unwrap() as f32);
+
+                        let oy = -(frames["OriginY"].as_f64().unwrap() as f32
+                            - frames["Height"].as_f64().unwrap() as f32 / 2.0)
+                            / (frames["Height"].as_f64().unwrap() as f32);
+                        println!("{:?}", frames["ResourceUrl"]);
+                        let s = SpriteBundle {
+                            texture: asset_server
+                                .load(frames["ResourceUrl"].to_string().replace("\"", "")),
+                            transform: Transform::from_xyz(x, y, z),
+                            sprite: Sprite {
+                                anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                                ..default()
+                            },
+                            ..default()
+                        };
+                        animationsprite.sprite.push(s);
+                    }
+                    commands.spawn((animationsprite, Name("Entity 2".to_string())));
                 }
-
-                let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
-
-                let ox = (objs["Resource"]["OriginX"].as_f64().unwrap() as f32
-                    - objs["Resource"]["Width"].as_f64().unwrap() as f32 / 2.0)
-                    / (objs["Resource"]["Width"].as_f64().unwrap() as f32);
-
-                let oy = -(objs["Resource"]["OriginY"].as_f64().unwrap() as f32
-                    - objs["Resource"]["Height"].as_f64().unwrap() as f32 / 2.0)
-                    / (objs["Resource"]["Height"].as_f64().unwrap() as f32);
-
-                // println!("{} and {} and {}", x, y, z);
-                println!("{} and {}", objs["ID"].as_i64().unwrap(), z);
-                commands.spawn(SpriteBundle {
-                    texture: asset_server.load(
-                        objs["Resource"]["ResourceUrl"]
-                            .to_string()
-                            .replace("\"", ""),
-                    ),
-                    transform: Transform::from_xyz(x, y, z),
-                    sprite: Sprite {
-                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                        ..default()
-                    },
-                    ..default()
-                });
             }
         }
 
         if value["Tiles"].as_array() != None {
             for tiles in value["Tiles"].as_array().unwrap() {
                 // println!("{:?}", tiles);
-                println!("{:?}", tiles["Resource"]["ResourceUrl"]);
+                // println!("{:?}", tiles["Resource"]["ResourceUrl"]);
                 let x = tiles["X"].as_f64().unwrap() as f32;
                 let y = -tiles["Y"].as_f64().unwrap() as f32 + 330.0;
                 // let z = tiles["ID"].as_f64().unwrap() as f32;
@@ -176,7 +180,7 @@ fn setup(
                     / (tiles["Resource"]["Height"].as_f64().unwrap() as f32);
 
                 // println!("{} and {} and {}", x, y, z);
-                println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
+                // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
                 commands.spawn(SpriteBundle {
                     texture: asset_server.load(
                         tiles["Resource"]["ResourceUrl"]
