@@ -127,7 +127,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     / 1000000000.0;
 
                 let mut animationsprite = AnimationSprite {
-                    index: 0,
+                    index: -1,
                     sprite: Vec::new(),
                     delay: Vec::new(),
                 };
