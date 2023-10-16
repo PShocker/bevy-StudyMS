@@ -26,6 +26,7 @@ fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
 pub struct AnimationSprite {
     pub sprite: Vec<SpriteBundle>,
     pub index: i32,
+    pub delay: Vec<i32>,
 }
 #[derive(Component)]
 pub struct Name(String);
@@ -126,6 +127,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 let mut animationsprite = AnimationSprite {
                     index: 0,
                     sprite: Vec::new(),
+                    delay: Vec::new(),
                 };
                 if objs["Resource"]["Frames"].as_array() != None {
                     for frames in objs["Resource"]["Frames"].as_array().unwrap() {
@@ -148,8 +150,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                             ..default()
                         };
                         animationsprite.sprite.push(s);
+                        animationsprite.delay.push(frames["Delay"].as_i64().unwrap() as i32);
                     }
                     commands.spawn((animationsprite, Name("Entity 2".to_string())));
+                    // commands.
                 }
             }
         }
