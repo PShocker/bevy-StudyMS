@@ -3,8 +3,7 @@
 use bevy::{prelude::*, window::WindowMode};
 use std::{
     cmp::{max, min},
-    fs,
-    sync::Arc, ops::Index,
+    fs, time,
 };
 
 fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
@@ -26,7 +25,10 @@ fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
 pub struct AnimationSprite {
     pub sprite: Vec<SpriteBundle>,
     pub index: i32,
-    pub delay: Vec<i32>,
+    pub delays: Vec<f32>,
+    pub delay: f32,
+    pub start: bool,
+    pub lastsprite: Option<Entity>,
 }
 #[derive(Component)]
 pub struct Name(String);
@@ -48,10 +50,37 @@ fn main() {
         .run();
 }
 
-pub fn animation(mut commands: Commands, query: Query<&AnimationSprite, With<Name>>) {
-    for s in query.iter() {
-        let sprite=s.sprite[0].clone();
-        commands.spawn(sprite);
+pub fn animation(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<&mut AnimationSprite, With<Name>>,
+) {
+    println!("{:?}", time.raw_elapsed_seconds());
+
+    for mut s in &mut query {
+        if s.index == -1 {
+            s.index += 1;
+            s.lastsprite = Some(commands.spawn(s.sprite[0].to_owned()).id());
+            s.delay = s.delays[s.index as usize] / 1000.0 + time.raw_elapsed_seconds();
+            s.start = true;
+        } else {
+            if s.lastsprite != None {
+                if s.start == true {
+                    if time.raw_elapsed_seconds() >= s.delay {
+                        commands.entity(s.lastsprite.unwrap()).despawn();
+                        s.lastsprite =
+                            Some(commands.spawn(s.sprite[s.index as usize].to_owned()).id());
+                        if s.index as usize == s.sprite.len() - 1 {
+                            s.index = 0;
+                        } else {
+                            s.index += 1;
+                        }
+                        s.delay=s.delays[s.index as usize] / 1000.0 + time.raw_elapsed_seconds();
+                    }
+                }
+            }
+        }
+
         // println!("{:?}", s.sprite);
     }
 }
@@ -129,7 +158,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 let mut animationsprite = AnimationSprite {
                     index: -1,
                     sprite: Vec::new(),
-                    delay: Vec::new(),
+                    delays: Vec::new(),
+                    start: false,
+                    lastsprite: None,
+                    delay: 0.0,
                 };
                 if objs["Resource"]["Frames"].as_array() != None {
                     for frames in objs["Resource"]["Frames"].as_array().unwrap() {
@@ -153,9 +185,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         };
                         animationsprite.sprite.push(s);
                         animationsprite
-                            .delay
-                            .push(frames["Delay"].as_i64().unwrap() as i32);
+                            .delays
+                            .push(frames["Delay"].as_i64().unwrap() as f32);
                     }
+
                     commands.spawn((animationsprite, Name(i.to_string())));
                     // commands.
                 }
