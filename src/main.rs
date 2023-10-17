@@ -75,7 +75,7 @@ pub fn animation(
                         } else {
                             s.index += 1;
                         }
-                        s.delay=s.delays[s.index as usize] / 1000.0 + time.raw_elapsed_seconds();
+                        s.delay = s.delays[s.index as usize] / 1000.0 + time.raw_elapsed_seconds();
                     }
                 }
             }
@@ -142,7 +142,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     for value in res["Layers"].as_array().unwrap() {
         // println!("{:?}", value);
         i += 1;
-
         if value["Objs"].as_array() != None {
             for objs in value["Objs"].as_array().unwrap() {
                 let x = objs["X"].as_f64().unwrap() as f32;
@@ -236,6 +235,50 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     ..default()
                 });
             }
+        }
+    }
+
+    for backs in res["Backs"].as_array().unwrap() {
+        if backs["Resource"].as_object() != None {
+            let resource = backs["Resource"].as_object().unwrap();
+            println!("{:?}", resource);
+            match backs["Ani"].as_i64().unwrap() {
+                0 => {
+                    //sprite
+                    let x = backs["X"].as_f64().unwrap() as f32;
+                    let y = -backs["Y"].as_f64().unwrap() as f32 + 330.0;
+                    let z = backs["ID"].as_f64().unwrap() as f32 / 100.0;
+                    // let ox = tiles["Resource"]["OriginX"].as_f64().unwrap() as f32;
+                    // let oy = tiles["Resource"]["OriginY"].as_f64().unwrap() as f32;
+
+                    let ox = (backs["Resource"]["OriginX"].as_f64().unwrap() as f32
+                        - backs["Resource"]["Width"].as_f64().unwrap() as f32 / 2.0)
+                        / (backs["Resource"]["Width"].as_f64().unwrap() as f32);
+
+                    let oy = -(backs["Resource"]["OriginY"].as_f64().unwrap() as f32
+                        - backs["Resource"]["Height"].as_f64().unwrap() as f32 / 2.0)
+                        / (backs["Resource"]["Height"].as_f64().unwrap() as f32);
+
+                    // println!("{} and {} and {}", x, y, z);
+                    // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
+                    commands.spawn(SpriteBundle {
+                        texture: asset_server.load(
+                            backs["Resource"]["ResourceUrl"]
+                                .to_string()
+                                .replace("\"", ""),
+                        ),
+                        transform: Transform::from_xyz(x, y, z),
+                        sprite: Sprite {
+                            anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                            ..default()
+                        },
+                        ..default()
+                    });
+                }
+                1 => {}
+                _ => println!("Ani Other"),
+            }
+            // print!("{:?}", backs);
         }
     }
 }
