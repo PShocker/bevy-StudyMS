@@ -55,7 +55,7 @@ pub fn animation(
     mut commands: Commands,
     mut query: Query<&mut AnimationSprite, With<Name>>,
 ) {
-    println!("{:?}", time.raw_elapsed_seconds());
+    // println!("{:?}", time.raw_elapsed_seconds());
 
     for mut s in &mut query {
         if s.index == -1 {
