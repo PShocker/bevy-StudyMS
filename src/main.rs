@@ -1,10 +1,14 @@
 //! Displays a single [`Sprite`], created from an image.
 
+use animationsprite::{AnimationSprite, animation};
+use background::{BackGround,background};
 use bevy::{prelude::*, window::WindowMode};
 use std::{
     cmp::{max, min},
-    fs, time,
+    fs,
 };
+mod animationsprite;
+mod background;
 
 fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
     let scale = 1 << 10; // 1024
@@ -21,18 +25,6 @@ fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
         - 1024 * 1024 * 1024 * 512;
 }
 
-#[derive(Component)]
-pub struct AnimationSprite {
-    pub sprite: Vec<SpriteBundle>,
-    pub index: i32,
-    pub delays: Vec<f32>,
-    pub delay: f32,
-    pub start: bool,
-    pub lastsprite: Option<Entity>,
-}
-#[derive(Component)]
-pub struct Name(String);
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -47,43 +39,10 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, movement)
         .add_systems(Update, animation)
+        .add_systems(Update, background)
         .run();
 }
 
-pub fn animation(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<&mut AnimationSprite, With<Name>>,
-) {
-    // println!("{:?}", time.raw_elapsed_seconds());
-
-    for mut s in &mut query {
-        if s.index == -1 {
-            s.index += 1;
-            s.lastsprite = Some(commands.spawn(s.sprite[0].to_owned()).id());
-            s.delay = s.delays[s.index as usize] / 1000.0 + time.raw_elapsed_seconds();
-            s.start = true;
-        } else {
-            if s.lastsprite != None {
-                if s.start == true {
-                    if time.raw_elapsed_seconds() >= s.delay {
-                        commands.entity(s.lastsprite.unwrap()).despawn();
-                        s.lastsprite =
-                            Some(commands.spawn(s.sprite[s.index as usize].to_owned()).id());
-                        if s.index as usize == s.sprite.len() - 1 {
-                            s.index = 0;
-                        } else {
-                            s.index += 1;
-                        }
-                        s.delay = s.delays[s.index as usize] / 1000.0 + time.raw_elapsed_seconds();
-                    }
-                }
-            }
-        }
-
-        // println!("{:?}", s.sprite);
-    }
-}
 
 pub fn movement(
     time: Res<Time>,
@@ -188,7 +147,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                             .push(frames["Delay"].as_i64().unwrap() as f32);
                     }
 
-                    commands.spawn((animationsprite, Name(i.to_string())));
+                    commands.spawn(animationsprite);
                     // commands.
                 }
             }
@@ -245,35 +204,21 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             match backs["Ani"].as_i64().unwrap() {
                 0 => {
                     //sprite
-                    let x = backs["X"].as_f64().unwrap() as f32;
-                    let y = -backs["Y"].as_f64().unwrap() as f32 + 330.0;
-                    let z = backs["ID"].as_f64().unwrap() as f32 / 100.0;
-                    // let ox = tiles["Resource"]["OriginX"].as_f64().unwrap() as f32;
-                    // let oy = tiles["Resource"]["OriginY"].as_f64().unwrap() as f32;
-
-                    let ox = (backs["Resource"]["OriginX"].as_f64().unwrap() as f32
-                        - backs["Resource"]["Width"].as_f64().unwrap() as f32 / 2.0)
-                        / (backs["Resource"]["Width"].as_f64().unwrap() as f32);
-
-                    let oy = -(backs["Resource"]["OriginY"].as_f64().unwrap() as f32
-                        - backs["Resource"]["Height"].as_f64().unwrap() as f32 / 2.0)
-                        / (backs["Resource"]["Height"].as_f64().unwrap() as f32);
-
-                    // println!("{} and {} and {}", x, y, z);
-                    // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                    commands.spawn(SpriteBundle {
-                        texture: asset_server.load(
-                            backs["Resource"]["ResourceUrl"]
-                                .to_string()
-                                .replace("\"", ""),
-                        ),
-                        transform: Transform::from_xyz(x, y, z),
-                        sprite: Sprite {
-                            anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                            ..default()
-                        },
-                        ..default()
-                    });
+                    let id = backs["ID"].as_i64().unwrap() as i32;
+                    let x = backs["X"].as_i64().unwrap() as i32;
+                    let y = -backs["Y"].as_i64().unwrap() as i32 + 330;
+                    let cx = backs["Cx"].as_i64().unwrap() as i32;
+                    let cy = backs["Cy"].as_i64().unwrap() as i32;
+                    let rx = backs["Rx"].as_i64().unwrap() as i32;
+                    let ry = backs["Ry"].as_i64().unwrap() as i32;
+                    let alpha = backs["Alpha"].as_i64().unwrap() as i32;
+                    let flip_x = backs["FlipX"].as_bool().unwrap();
+                    let front = backs["Front"].as_bool().unwrap();
+                    let ani = backs["Ani"].as_i64().unwrap() as i32;
+                    let types = backs["Type"].as_i64().unwrap() as i32;
+                    let resource = backs["Resource"].to_string();
+                    let background = BackGround::new(id,x,y,cx,cy,rx,ry,alpha,flip_x,front,ani,types,resource);
+                    commands.spawn(background);
                 }
                 1 => {}
                 _ => println!("Ani Other"),
