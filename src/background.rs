@@ -1,14 +1,23 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PrimaryWindow};
 
+pub fn background(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query_backgroud: Query<&mut BackGround>,
+    mut query_transform: Query<(&mut Transform, &mut OrthographicProjection), With<Camera>>,
+    mut window_query: Query<&Window, With<PrimaryWindow>>,
+) {
+    let transform = query_transform.get_single_mut().ok().unwrap().0;
 
-pub fn background(time: Res<Time>, mut commands: Commands,mut query: Query<&mut BackGround>,) {
-    // println!("{:?}", time.delta_seconds());
-    for mut s in &mut query {
-        println!("{:?}", s.resource);
+    println!("{:?}", transform.translation);
+    // for (mut transform,mut o) in query_transform.iter_mut() {
+    //     println!("{:?}", transform.translation);
+    // }
+
+    for (mut backgroud) in query_backgroud.iter_mut() {
+        // println!("{:?}", time.delta_seconds());
     }
-
 }
-
 
 #[derive(Component)]
 pub struct BackGround {
@@ -37,7 +46,7 @@ pub struct Tilemode {
 
 impl BackGround {
     pub fn new(
-        id:i32,
+        id: i32,
         x: i32,
         y: i32,
         cx: i32,

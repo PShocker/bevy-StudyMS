@@ -199,8 +199,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     for backs in res["Backs"].as_array().unwrap() {
         if backs["Resource"].as_object() != None {
-            let resource = backs["Resource"].as_object().unwrap();
-            println!("{:?}", resource);
+            // let resource = backs["Resource"].as_object().unwrap();
+            // println!("{:?}", resource);
             match backs["Ani"].as_i64().unwrap() {
                 0 => {
                     //sprite
