@@ -9,13 +9,46 @@ pub fn background(
 ) {
     let transform = query_transform.get_single_mut().ok().unwrap().0;
 
-    println!("{:?}", transform.translation);
-    // for (mut transform,mut o) in query_transform.iter_mut() {
-    //     println!("{:?}", transform.translation);
-    // }
-
+    // println!("{:?}", time.delta_seconds());
     for (mut backgroud) in query_backgroud.iter_mut() {
         // println!("{:?}", time.delta_seconds());
+        // println!("{:?}", backgroud.resource);
+        let res: serde_json::Value = serde_json::from_str(&backgroud.resource).unwrap();
+        let cx;
+        if backgroud.cx==0 {
+            cx=res["Width"].as_i64().unwrap() as i32;
+        }else {
+            cx=backgroud.cx;
+        }
+        let mut positionOffset_x=0;
+        // calculate position
+        if (backgroud.tilemode.auto_scroll_x==true) {
+            positionOffset_x += backgroud.rx * 5 * (time.delta_seconds()*1000.0) as i32;
+            positionOffset_x %= cx;
+            println!("{:?}", positionOffset_x);
+        }
+        // let cx=res || resourceRect.width;
+
+        let base_pos_x = backgroud.x+positionOffset_x;
+        let base_pos_y = backgroud.y;
+
+        let tile_count_x = 1;
+        let tile_count_y = 1;
+        if backgroud.tilemode.tile_x && cx > 0 {
+            let tile_start_right = (base_pos_x + resourceRect.right - screenRect.left) % cx;
+            if (tile_start_right <= 0)
+                tile_start_right += cx;
+            tile_start_right += screenRect.left;
+
+            let tileStartLeft = tile_start_right - resourceRect.width;
+            if (tileStartLeft >= screenRect.right) {
+                tile_count_x = 0;
+            } else {
+                tile_count_x = Math.ceil((screenRect.right - tileStartLeft) / cx);
+                basePos.x = tileStartLeft - resourceRect.x;
+            }
+        }
+
     }
 }
 
