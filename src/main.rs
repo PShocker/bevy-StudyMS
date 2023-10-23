@@ -29,7 +29,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                resolution: (1920.0, 1080.0).into(),
+                resolution: (1280.0, 960.0).into(),
                 title: "StudyMS".into(),
                 mode: WindowMode::Windowed,
                 ..default()
@@ -104,7 +104,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         if value["Objs"].as_array() != None {
             for objs in value["Objs"].as_array().unwrap() {
                 let x = objs["X"].as_f64().unwrap() as f32;
-                let y = -objs["Y"].as_f64().unwrap() as f32 + 330.0;
+                let y = -objs["Y"].as_f64().unwrap() as f32;
                 let z = composite_zindex(
                     i,
                     objs["Z"].as_i64().unwrap() as i128,
@@ -158,7 +158,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 // println!("{:?}", tiles);
                 // println!("{:?}", tiles["Resource"]["ResourceUrl"]);
                 let x = tiles["X"].as_f64().unwrap() as f32;
-                let y = -tiles["Y"].as_f64().unwrap() as f32 + 330.0;
+                let y = -tiles["Y"].as_f64().unwrap() as f32;
                 // let z = tiles["ID"].as_f64().unwrap() as f32;
                 let z = composite_zindex(
                     i,
@@ -206,7 +206,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     //sprite
                     let id = backs["ID"].as_i64().unwrap() as i32;
                     let x = backs["X"].as_i64().unwrap() as i32;
-                    let y = -backs["Y"].as_i64().unwrap() as i32 + 330;
+                    let y = -backs["Y"].as_i64().unwrap() as i32;
                     let cx = backs["Cx"].as_i64().unwrap() as i32;
                     let cy = backs["Cy"].as_i64().unwrap() as i32;
                     let rx = backs["Rx"].as_i64().unwrap() as i32;
