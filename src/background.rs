@@ -21,6 +21,13 @@ pub fn background(
     let window = window_query.get_single_mut().ok().unwrap();
     // println!("{:?}", window);
     // println!("{:?}", time.delta_seconds());
+    for backsprite in back_query.iter_mut() {
+        let id = backsprite.lastsprite;
+        if id != None {
+            commands.entity(id.unwrap()).despawn();
+        }
+    }
+
     for backgroud in query_backgroud.iter_mut() {
         // println!("{:?}", time.delta_seconds());
         // println!("{:?}", backgroud.resource);
@@ -119,9 +126,6 @@ pub fn background(
                         ..default()
                     })
                     .id();
-                commands.spawn(BackSprite {
-                    lastsprite: Some(enity),
-                });
             }
         }
     }
