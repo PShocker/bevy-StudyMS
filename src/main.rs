@@ -1,35 +1,24 @@
 //! Displays a single [`Sprite`], created from an image.
 
-use animationsprite::{AnimationSprite, animation};
-use background::{BackGround,background};
+use animationsprite::{animation, AnimationSprite};
+use background::{background, BackGround};
 use bevy::{prelude::*, window::WindowMode};
 use std::{
     cmp::{max, min},
     fs,
 };
+use utils::composite_zindex;
+
+use crate::utils::{cal_ax, cal_ay};
 mod animationsprite;
 mod background;
-
-fn composite_zindex(z: i128, z0: i128, z1: i128, z2: i128) -> i128 {
-    let scale = 1 << 10; // 1024
-    let normalize = |mut v: i128| -> i128 {
-        // v = v.abs();
-        v = v + scale / 2;
-        v = max(0, min(v, scale - 1));
-        return v;
-    };
-    return normalize(z) * scale * scale * scale
-        + normalize(z0) * scale * scale
-        + normalize(z1) * scale
-        + normalize(z2)
-        - 1024 * 1024 * 1024 * 512;
-}
+mod utils;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                resolution: (1280.0, 960.0).into(),
+                resolution: (1600.0, 960.0).into(),
                 title: "StudyMS".into(),
                 mode: WindowMode::Windowed,
                 ..default()
@@ -42,7 +31,6 @@ fn main() {
         .add_systems(Update, background)
         .run();
 }
-
 
 pub fn movement(
     time: Res<Time>,
@@ -123,13 +111,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 };
                 if objs["Resource"]["Frames"].as_array() != None {
                     for frames in objs["Resource"]["Frames"].as_array().unwrap() {
-                        let ox = (frames["OriginX"].as_f64().unwrap() as f32
-                            - frames["Width"].as_f64().unwrap() as f32 / 2.0)
-                            / (frames["Width"].as_f64().unwrap() as f32);
+                        let ox = cal_ax(
+                            frames["OriginX"].as_f64().unwrap() as f32,
+                            frames["Width"].as_f64().unwrap() as f32,
+                        );
 
-                        let oy = -(frames["OriginY"].as_f64().unwrap() as f32
-                            - frames["Height"].as_f64().unwrap() as f32 / 2.0)
-                            / (frames["Height"].as_f64().unwrap() as f32);
+                        let oy = -cal_ay(
+                            frames["OriginY"].as_f64().unwrap() as f32,
+                            frames["Height"].as_f64().unwrap() as f32,
+                        );
                         println!("{:?}", frames["ResourceUrl"]);
                         let s = SpriteBundle {
                             texture: asset_server
@@ -170,13 +160,16 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 // let ox = tiles["Resource"]["OriginX"].as_f64().unwrap() as f32;
                 // let oy = tiles["Resource"]["OriginY"].as_f64().unwrap() as f32;
 
-                let ox = (tiles["Resource"]["OriginX"].as_f64().unwrap() as f32
-                    - tiles["Resource"]["Width"].as_f64().unwrap() as f32 / 2.0)
-                    / (tiles["Resource"]["Width"].as_f64().unwrap() as f32);
+                let ox = cal_ax(
+                    tiles["Resource"]["OriginX"].as_f64().unwrap() as f32,
+                    tiles["Resource"]["Width"].as_f64().unwrap() as f32,
+                );
 
-                let oy = -(tiles["Resource"]["OriginY"].as_f64().unwrap() as f32
-                    - tiles["Resource"]["Height"].as_f64().unwrap() as f32 / 2.0)
-                    / (tiles["Resource"]["Height"].as_f64().unwrap() as f32);
+                let oy = -cal_ay(
+                    tiles["Resource"]["OriginY"].as_f64().unwrap() as f32,
+                    tiles["Resource"]["Height"].as_f64().unwrap() as f32,
+                );
+                
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
@@ -217,7 +210,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let ani = backs["Ani"].as_i64().unwrap() as i32;
                     let types = backs["Type"].as_i64().unwrap() as i32;
                     let resource = backs["Resource"].to_string();
-                    let background = BackGround::new(id,x,y,cx,cy,rx,ry,alpha,flip_x,front,ani,types,resource);
+                    let background = BackGround::new(
+                        id, x, y, cx, cy, rx, ry, alpha, flip_x, front, ani, types, resource,
+                    );
                     commands.spawn(background);
                 }
                 1 => {}
