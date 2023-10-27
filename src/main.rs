@@ -3,7 +3,7 @@
 use animationsprite::{animation, AnimationSprite};
 use background::{background, BackGround};
 use bevy::{prelude::*, window::WindowMode};
-use player::movement;
+use player::{movement, init_player};
 use std::{
     cmp::{max, min},
     fs,
@@ -28,6 +28,7 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, setup)
+        .add_systems(Startup, init_player)
         .add_systems(Update, movement)
         .add_systems(Update, animation)
         // .add_systems(Update, background)

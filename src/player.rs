@@ -1,5 +1,10 @@
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 
+
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
+pub struct Player;
+
 pub fn movement(
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
@@ -44,6 +49,9 @@ pub fn movement(
     }
 }
 
-pub fn init(){
-    
+pub fn init_player(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("avatar.png"),
+        ..default()
+    });
 }
