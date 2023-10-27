@@ -8,6 +8,110 @@ pub struct BackSprite {
     pub lastsprite: Option<Entity>,
 }
 
+
+// pub fn update_background(background:&mut BackGround){
+//         // println!("{:?}", time.delta_seconds());
+//         // println!("{:?}", backgroud.resource);
+//         let res: serde_json::Value = serde_json::from_str(&background.resource).unwrap();
+//         let cx;
+//         let cy;
+//         if background.cx == 0 {
+//             cx = res["Width"].as_i64().unwrap() as i32;
+//         } else {
+//             cx = background.cx;
+//         }
+
+//         if background.cy == 0 {
+//             cy = res["Height"].as_i64().unwrap() as i32;
+//         } else {
+//             cy = background.cy;
+//         }
+//         let mut position_offset_x = 0;
+//         let mut position_offset_y = 0;
+
+//         let mut base_pos_x = background.x + position_offset_x;
+//         let mut base_pos_y = background.y;
+
+//         let mut x = background.x as f32;
+//         let mut y = background.y as f32;
+//         let mut z: f32;
+
+//         let mut tile_count_x = 1;
+//         let mut tile_count_y = 1;
+//         let screen_left = transform.translation.x as i32 - window.width() as i32 / 2;
+//         // let screen_left = 0;
+//         let screen_right = screen_left + window.width() as i32;
+
+//         let screen_top = transform.translation.y as i32 + window.height() as i32 / 2;
+//         let screen_bottom = screen_top - window.width() as i32;
+
+//         if background.tilemode.tile_x && cx > 0 {
+//             if x <= screen_left as f32 {
+//                 while x <= screen_left as f32 {
+//                     x += cx as f32;
+//                 }
+//                 x -= cx as f32;
+//             } else {
+//                 while x > screen_left as f32 {
+//                     x -= cx as f32;
+//                 }
+//             }
+//             tile_count_x += (screen_right - x as i32) / cx + 1;
+//         }
+
+//         if background.tilemode.tile_y && cy > 0 {
+//             if y <= screen_bottom as f32 {
+//                 while y <= screen_bottom as f32 {
+//                     y += cy as f32;
+//                 }
+//                 y -= cy as f32;
+//             } else {
+//                 while y > screen_bottom as f32 {
+//                     y -= cy as f32;
+//                 }
+//             }
+//             // tile_start_right = x as i32 + res["Width"].as_i64().unwrap() as i32
+//             //     - res["OriginX"].as_i64().unwrap() as i32;
+//             // println!("resourceRect.right:{:?}", res["Width"].as_i64().unwrap() as i32-res["OriginX"].as_i64().unwrap() as i32);
+
+//             tile_count_y += (screen_top - y as i32) / cy + 1;
+//         }
+
+//         if backgroud.front == true {
+//             z = -10.0 + backgroud.id as f32 / 10.0;
+//         } else {
+//             z = -20.0 + backgroud.id as f32 / 10.0;
+//         }
+
+//         let ox = cal_ax(
+//             res["OriginX"].as_f64().unwrap() as f32,
+//             res["Width"].as_f64().unwrap() as f32,
+//         );
+
+//         let oy = -cal_ay(
+//             res["OriginY"].as_f64().unwrap() as f32,
+//             res["Height"].as_f64().unwrap() as f32,
+//         );
+
+//         for j in 0..tile_count_y {
+//             for i in 0..tile_count_x {
+//                 let enity = commands
+//                     .spawn(SpriteBundle {
+//                         texture: asset_server
+//                             .load(res["ResourceUrl"].to_string().replace("\"", "")),
+//                         transform: Transform::from_xyz(x + (i * cx) as f32, y + (j * cy) as f32, z),
+//                         sprite: Sprite {
+//                             anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+//                             ..default()
+//                         },
+//                         ..default()
+//                     })
+//                     .id();
+//             }
+//         }
+    
+// }
+
 pub fn background(
     time: Res<Time>,
     mut commands: Commands,

@@ -28,7 +28,7 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, movement)
         .add_systems(Update, animation)
-        // .add_systems(Update, background)
+        .add_systems(Update, background)
         .run();
 }
 
