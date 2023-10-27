@@ -1,6 +1,5 @@
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 
-
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct Player;
@@ -9,6 +8,7 @@ pub fn movement(
     time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(&mut Transform, &mut OrthographicProjection), With<Camera>>,
+    mut query_: Query<&mut Transform, With<Player>>,
 ) {
     for (mut transform, mut ortho) in query.iter_mut() {
         let mut direction = Vec3::ZERO;
@@ -46,12 +46,19 @@ pub fn movement(
         // Important! We need to restore the Z values when moving the camera around.
         // Bevy has a specific camera setup and this can mess with how our layers are shown.
         transform.translation.z = z;
+
+        for (mut player) in query_.iter_mut() {
+            println!("{:?}", player);
+        }
     }
 }
 
 pub fn init_player(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("avatar.png"),
-        ..default()
-    });
+    commands
+        .spawn(SpriteBundle {
+            texture: asset_server.load("avatar.png"),
+            transform:Transform::default(),
+            ..default()
+        })
+        .insert(Player);
 }
