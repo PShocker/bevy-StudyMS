@@ -3,6 +3,7 @@
 use animationsprite::{animation, AnimationSprite};
 use background::{background, BackGround};
 use bevy::{prelude::*, window::WindowMode};
+use foothold::foothold;
 use player::{movement, player};
 use std::{
     cmp::{max, min},
@@ -10,11 +11,12 @@ use std::{
 };
 use utils::composite_zindex;
 
-use crate::utils::{cal_ax, cal_ay};
+use crate::{utils::{cal_ax, cal_ay}, foothold::FootHold};
 mod animationsprite;
 mod background;
 mod utils;
 mod player;
+mod foothold;
 
 fn main() {
     App::new()
@@ -28,9 +30,10 @@ fn main() {
             ..default()
         }))
         .add_systems(Startup, setup)
-        // .add_systems(Startup, player)
+        .add_systems(Startup, player)
         .add_systems(Update, movement)
         .add_systems(Update, animation)
+        .add_systems(Update, foothold)
         // .add_systems(Update, background)
         .run();
 }
@@ -180,4 +183,23 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             // print!("{:?}", backs);
         }
     }
+
+    if res["FootHold"].as_array() != None {
+        for foothold in res["FootHold"].as_array().unwrap() {
+            println!("{:?}",foothold);
+            let foothold = FootHold {
+                x1: foothold["X1"].as_i64().unwrap() as i32,
+                x2: foothold["X2"].as_i64().unwrap() as i32,
+                y1: foothold["Y1"].as_i64().unwrap() as i32,
+                y2: foothold["Y2"].as_i64().unwrap() as i32,
+                prev: foothold["Prev"].as_i64().unwrap() as i32,
+                next: foothold["Next"].as_i64().unwrap() as i32,
+                piece: foothold["Piece"].as_i64().unwrap() as i32,
+                id: foothold["ID"].as_i64().unwrap() as i32,
+            };
+            commands.spawn(foothold);
+        }
+    }
+
+    
 }
