@@ -13,15 +13,13 @@ use std::{
 };
 use utils::composite_zindex;
 
-use crate::{
-    utils::{cal_ax, cal_ay},
-};
+use crate::utils::{cal_ax, cal_ay};
 mod animationsprite;
 mod background;
+mod camera;
 mod foothold;
 mod player;
 mod utils;
-mod camera;
 
 fn main() {
     App::new()
@@ -196,9 +194,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 id: foothold["ID"].as_i64().unwrap() as i32,
             };
             // commands.spawn(foothold);
-            commands.spawn(Collider::segment(
-                Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
-                Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+            commands.spawn((
+                Collider::segment(
+                    Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
+                    Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+                ),
             ));
         }
     }

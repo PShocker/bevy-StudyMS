@@ -14,7 +14,7 @@ pub fn player(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         RigidBody::Dynamic,
         LockedAxes::ROTATION_LOCKED,
-        Collider::cuboid(13.0, 35.0),
+        Collider::cuboid(13.0, 32.0),
         Velocity::zero(),
         Restitution::new(0.0),
         // GravityScale(5.0),
@@ -32,8 +32,8 @@ pub fn player_run(
     }
     let mut velocity = q_player.single_mut();
     if keyboard_input.pressed(KeyCode::A) {
-        velocity.linvel.x = -120.0;
+        velocity.linvel.x = -180.0;
     } else if keyboard_input.pressed(KeyCode::D) {
-        velocity.linvel.x = 120.0;
+        velocity.linvel.x = 180.0;
     }
 }
