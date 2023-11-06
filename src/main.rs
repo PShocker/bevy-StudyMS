@@ -32,11 +32,9 @@ fn main() {
         ))
         .add_systems(Startup, setup)
         .add_systems(Startup, player)
-        // .add_systems(Update, movement)
         .add_systems(Update, animation)
         .add_systems(Update, camera_follow)
         .add_systems(Update, player_run)
-        // .add_systems(Update, foothold)
         // .add_systems(Update, background)
         .run();
 }

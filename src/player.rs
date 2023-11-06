@@ -14,7 +14,7 @@ pub fn player(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         RigidBody::Dynamic,
         LockedAxes::ROTATION_LOCKED,
-        Collider::cuboid(20.0, 40.0),
+        Collider::cuboid(13.0, 35.0),
         Velocity::zero(),
         Restitution::new(0.0),
         // GravityScale(5.0),
