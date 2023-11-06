@@ -35,7 +35,7 @@ fn main() {
         .add_systems(Update, animation)
         .add_systems(Update, camera_follow)
         .add_systems(Update, player_run)
-        // .add_systems(Update, background)
+        .add_systems(Update, background)
         .run();
 }
 

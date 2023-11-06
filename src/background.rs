@@ -2,12 +2,9 @@ use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 
 use crate::utils::{cal_ax, cal_ay};
 
-#[derive(Component, Default, Reflect)]
+#[derive(Component, Default, Reflect, Debug)]
 #[reflect(Component)]
-pub struct BackSprite {
-    pub lastsprite: Option<Entity>,
-}
-
+pub struct BackEnity;
 
 pub fn background(
     time: Res<Time>,
@@ -15,18 +12,16 @@ pub fn background(
     mut query_backgroud: Query<&mut BackGround>,
     mut query_transform: Query<(&mut Transform, &mut OrthographicProjection), With<Camera>>,
     mut window_query: Query<&Window, With<PrimaryWindow>>,
-    mut back_query: Query<&BackSprite>,
+    mut q_backenity: Query<Entity, With<BackEnity>>,
     asset_server: Res<AssetServer>,
 ) {
     let transform = query_transform.get_single_mut().ok().unwrap().0;
     let window = window_query.get_single_mut().ok().unwrap();
     // println!("{:?}", window);
     // println!("{:?}", time.delta_seconds());
-    for backsprite in back_query.iter_mut() {
-        let id = backsprite.lastsprite;
-        if id != None {
-            commands.entity(id.unwrap()).despawn();
-        }
+    for backenity in q_backenity.iter_mut() {
+        // println!("{:?}", backenity);
+        commands.entity(backenity).despawn();
     }
 
     for backgroud in query_backgroud.iter_mut() {
@@ -115,8 +110,8 @@ pub fn background(
 
         for j in 0..tile_count_y {
             for i in 0..tile_count_x {
-                let enity = commands
-                    .spawn(SpriteBundle {
+                commands.spawn((
+                    SpriteBundle {
                         texture: asset_server
                             .load(res["ResourceUrl"].to_string().replace("\"", "")),
                         transform: Transform::from_xyz(x + (i * cx) as f32, y + (j * cy) as f32, z),
@@ -125,8 +120,9 @@ pub fn background(
                             ..default()
                         },
                         ..default()
-                    })
-                    .id();
+                    },
+                    BackEnity,
+                ));
             }
         }
     }

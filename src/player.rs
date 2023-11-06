@@ -32,11 +32,8 @@ pub fn player_run(
     }
     let mut velocity = q_player.single_mut();
     if keyboard_input.pressed(KeyCode::A) {
-        velocity.linvel.x = -90.0;
+        velocity.linvel.x = -120.0;
     } else if keyboard_input.pressed(KeyCode::D) {
-        velocity.linvel.x = 90.0;
-    } else {
-        // 不按键时停止左右奔跑
-        velocity.linvel.x = 0.0;
+        velocity.linvel.x = 120.0;
     }
 }
