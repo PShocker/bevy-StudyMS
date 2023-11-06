@@ -1,55 +1,9 @@
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
+use bevy_rapier2d::prelude::*;
 
-#[derive(Component, Default, Reflect,Debug)]
+#[derive(Component, Default, Reflect, Debug)]
 #[reflect(Component)]
 pub struct Player;
-
-pub fn movement(
-    time: Res<Time>,
-    keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&mut Transform, &mut OrthographicProjection), Without<Player>>,
-    mut query_player: Query<(&mut Player,&mut Transform)>,
-) {
-    // let mut player_transform=query_player.get_single_mut().unwrap().1;
-    for (mut transform, mut ortho) in query.iter_mut() {
-        let mut direction = Vec3::ZERO;
-
-        if keyboard_input.pressed(KeyCode::A) {
-            direction -= Vec3::new(1.0, 0.0, 0.0);
-        }
-
-        if keyboard_input.pressed(KeyCode::D) {
-            direction += Vec3::new(1.0, 0.0, 0.0);
-        }
-
-        if keyboard_input.pressed(KeyCode::W) {
-            direction += Vec3::new(0.0, 1.0, 0.0);
-        }
-
-        if keyboard_input.pressed(KeyCode::S) {
-            direction -= Vec3::new(0.0, 1.0, 0.0);
-        }
-
-        if keyboard_input.pressed(KeyCode::Z) {
-            ortho.scale += 0.1;
-        }
-
-        if keyboard_input.pressed(KeyCode::X) {
-            ortho.scale -= 0.1;
-        }
-
-        if ortho.scale < 0.5 {
-            ortho.scale = 0.5;
-        }
-
-        let z = transform.translation.z;
-        transform.translation += time.delta_seconds() * direction * 500.;
-        // player_transform.translation+=time.delta_seconds() * direction * 500.;
-        // Important! We need to restore the Z values when moving the camera around.
-        // Bevy has a specific camera setup and this can mess with how our layers are shown.
-        transform.translation.z = z;
-    }
-}
 
 pub fn player(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
@@ -58,6 +12,31 @@ pub fn player(mut commands: Commands, asset_server: Res<AssetServer>) {
             transform: Transform::from_xyz(0.0, 0.0, 100.0),
             ..default()
         },
+        RigidBody::Dynamic,
+        LockedAxes::ROTATION_LOCKED,
+        Collider::cuboid(20.0, 40.0),
+        Velocity::zero(),
+        Restitution::new(0.0),
+        // GravityScale(5.0),
         Player,
     ));
+}
+
+// 角色奔跑
+pub fn player_run(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut q_player: Query<&mut Velocity, With<Player>>,
+) {
+    if q_player.is_empty() {
+        return;
+    }
+    let mut velocity = q_player.single_mut();
+    if keyboard_input.pressed(KeyCode::A) {
+        velocity.linvel.x = -90.0;
+    } else if keyboard_input.pressed(KeyCode::D) {
+        velocity.linvel.x = 90.0;
+    } else {
+        // 不按键时停止左右奔跑
+        velocity.linvel.x = 0.0;
+    }
 }

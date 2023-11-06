@@ -3,37 +3,40 @@
 use animationsprite::{animation, AnimationSprite};
 use background::{background, BackGround};
 use bevy::{prelude::*, window::WindowMode};
-use foothold::foothold;
-use player::{movement, player};
+use bevy_rapier2d::prelude::*;
+use camera::*;
+use foothold::FootHold;
+use player::{player, player_run};
 use std::{
     cmp::{max, min},
     fs,
 };
 use utils::composite_zindex;
 
-use crate::{utils::{cal_ax, cal_ay}, foothold::FootHold};
+use crate::{
+    utils::{cal_ax, cal_ay},
+};
 mod animationsprite;
 mod background;
-mod utils;
-mod player;
 mod foothold;
+mod player;
+mod utils;
+mod camera;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                resolution: (1600.0, 960.0).into(),
-                title: "StudyMS".into(),
-                mode: WindowMode::Windowed,
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins((
+            DefaultPlugins,
+            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
+            RapierDebugRenderPlugin::default(),
+        ))
         .add_systems(Startup, setup)
         .add_systems(Startup, player)
-        .add_systems(Update, movement)
+        // .add_systems(Update, movement)
         .add_systems(Update, animation)
-        .add_systems(Update, foothold)
+        .add_systems(Update, camera_follow)
+        .add_systems(Update, player_run)
+        // .add_systems(Update, foothold)
         // .add_systems(Update, background)
         .run();
 }
@@ -42,8 +45,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     let path = "./assets/Map/Map/Map0/000010000.json";
     let data = fs::read_to_string(path).expect("Unable to read file");
     let res: serde_json::Value = serde_json::from_str(&data).unwrap();
-
-    // print!("{:?}\n", p);
 
     commands.spawn(Camera2dBundle::default());
 
@@ -131,7 +132,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     tiles["Resource"]["OriginY"].as_f64().unwrap() as f32,
                     tiles["Resource"]["Height"].as_f64().unwrap() as f32,
                 );
-                
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
@@ -186,7 +186,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     if res["FootHold"].as_array() != None {
         for foothold in res["FootHold"].as_array().unwrap() {
-            println!("{:?}",foothold);
+            println!("{:?}", foothold);
             let foothold = FootHold {
                 x1: foothold["X1"].as_i64().unwrap() as i32,
                 x2: foothold["X2"].as_i64().unwrap() as i32,
@@ -197,9 +197,11 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 piece: foothold["Piece"].as_i64().unwrap() as i32,
                 id: foothold["ID"].as_i64().unwrap() as i32,
             };
-            commands.spawn(foothold);
+            // commands.spawn(foothold);
+            commands.spawn(Collider::segment(
+                Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
+                Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+            ));
         }
     }
-
-    
 }
