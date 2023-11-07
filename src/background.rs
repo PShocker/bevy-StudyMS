@@ -9,24 +9,21 @@ pub struct BackEnity;
 pub fn background(
     time: Res<Time>,
     mut commands: Commands,
-    mut query_backgroud: Query<&mut BackGround>,
-    mut query_transform: Query<(&mut Transform, &mut OrthographicProjection), With<Camera>>,
-    mut window_query: Query<&Window, With<PrimaryWindow>>,
+    mut q_backgroud: Query<&mut BackGround>,
+    mut q_transform: Query<(&mut Transform, &mut OrthographicProjection), With<Camera>>,
+    mut q_window: Query<&Window, With<PrimaryWindow>>,
     mut q_backenity: Query<Entity, With<BackEnity>>,
     asset_server: Res<AssetServer>,
 ) {
-    let transform = query_transform.get_single_mut().ok().unwrap().0;
-    let window = window_query.get_single_mut().ok().unwrap();
+    let transform = q_transform.get_single_mut().ok().unwrap().0;
+    let window = q_window.get_single_mut().ok().unwrap();
     // println!("{:?}", window);
     // println!("{:?}", time.delta_seconds());
     for backenity in q_backenity.iter_mut() {
-        // println!("{:?}", backenity);
         commands.entity(backenity).despawn();
     }
 
-    for backgroud in query_backgroud.iter_mut() {
-        // println!("{:?}", time.delta_seconds());
-        // println!("{:?}", backgroud.resource);
+    for backgroud in q_backgroud.iter_mut() {
         let res: serde_json::Value = serde_json::from_str(&backgroud.resource).unwrap();
         let cx;
         let cy;
@@ -44,11 +41,27 @@ pub fn background(
         let mut position_offset_x = 0;
         let mut position_offset_y = 0;
 
-        let mut base_pos_x = backgroud.x + position_offset_x;
-        let mut base_pos_y = backgroud.y;
+        if backgroud.tilemode.auto_scroll_x == true {
+            position_offset_x += (backgroud.rx as f32 * 5.0 * time.delta_seconds()) as i32;
+            position_offset_x %= cx;
+        } else {
+            position_offset_x =
+                (transform.translation.x as f32 * (backgroud.rx + 100) as f32 / 100.0) as i32;
+        }
 
-        let mut x = backgroud.x as f32;
-        let mut y = backgroud.y as f32;
+        if backgroud.tilemode.auto_scroll_y == true {
+            position_offset_y += (backgroud.ry as f32 * 5.0 * time.delta_seconds()) as i32;
+            position_offset_y %= cy;
+        } else {
+            position_offset_y =
+                (transform.translation.y as f32 * (backgroud.ry + 100) as f32 / 100.0) as i32;
+        }
+
+        let mut base_pos_x = backgroud.x + position_offset_x;
+        let mut base_pos_y = backgroud.y + position_offset_y;
+
+        let mut x = base_pos_x as f32;
+        let mut y = base_pos_y as f32;
         let mut z: f32;
 
         let mut tile_count_x = 1;
@@ -58,7 +71,7 @@ pub fn background(
         let screen_right = screen_left + window.width() as i32;
 
         let screen_top = transform.translation.y as i32 + window.height() as i32 / 2;
-        let screen_bottom = screen_top - window.width() as i32;
+        let screen_bottom = screen_top - window.height() as i32;
 
         if backgroud.tilemode.tile_x && cx > 0 {
             if x <= screen_left as f32 {
@@ -85,12 +98,10 @@ pub fn background(
                     y -= cy as f32;
                 }
             }
-            // tile_start_right = x as i32 + res["Width"].as_i64().unwrap() as i32
-            //     - res["OriginX"].as_i64().unwrap() as i32;
-            // println!("resourceRect.right:{:?}", res["Width"].as_i64().unwrap() as i32-res["OriginX"].as_i64().unwrap() as i32);
-
             tile_count_y += (screen_top - y as i32) / cy + 1;
         }
+
+        // println!("tile_count_y:{:?}", tile_count_y);
 
         if backgroud.front == true {
             z = -10.0 + backgroud.id as f32 / 10.0;

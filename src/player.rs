@@ -14,10 +14,11 @@ pub fn player(mut commands: Commands, asset_server: Res<AssetServer>) {
         },
         RigidBody::Dynamic,
         LockedAxes::ROTATION_LOCKED,
-        Collider::cuboid(13.0, 32.0),
+        // Collider::cuboid(13.0, 32.0),
+        Collider::round_cuboid(7.0, 22.0,0.1),
         Velocity::zero(),
         Restitution::new(0.0),
-        // GravityScale(5.0),
+        GravityScale(12.0),
         Player,
     ));
 }
@@ -35,5 +36,7 @@ pub fn player_run(
         velocity.linvel.x = -180.0;
     } else if keyboard_input.pressed(KeyCode::D) {
         velocity.linvel.x = 180.0;
+    }else {
+        velocity.linvel.x = 0.0;
     }
 }

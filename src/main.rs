@@ -79,7 +79,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                             frames["OriginY"].as_f64().unwrap() as f32,
                             frames["Height"].as_f64().unwrap() as f32,
                         );
-                        println!("{:?}", frames["ResourceUrl"]);
+                        // println!("{:?}", frames["ResourceUrl"]);
                         let s = SpriteBundle {
                             texture: asset_server
                                 .load(frames["ResourceUrl"].to_string().replace("\"", "")),
@@ -182,7 +182,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     if res["FootHold"].as_array() != None {
         for foothold in res["FootHold"].as_array().unwrap() {
-            println!("{:?}", foothold);
+            // println!("{:?}", foothold);
             let foothold = FootHold {
                 x1: foothold["X1"].as_i64().unwrap() as i32,
                 x2: foothold["X2"].as_i64().unwrap() as i32,
