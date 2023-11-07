@@ -6,7 +6,7 @@ use bevy::{prelude::*, window::WindowMode};
 use bevy_rapier2d::prelude::*;
 use camera::*;
 use foothold::FootHold;
-use player::{player, player_run};
+use player::{player, player_run,};
 use std::{
     cmp::{max, min},
     fs,
@@ -194,12 +194,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 id: foothold["ID"].as_i64().unwrap() as i32,
             };
             // commands.spawn(foothold);
-            commands.spawn((
-                Collider::segment(
-                    Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
-                    Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
-                ),
-            ));
+            commands.spawn((Collider::segment(
+                Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
+                Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+            ),));
         }
     }
 }
