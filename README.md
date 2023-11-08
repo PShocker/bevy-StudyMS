@@ -7,4 +7,4 @@
 - [✓] 镜头跟随
 - [✓] 物理效果
 
-![](/demo.png)
+![](https://github.com/PShocker/StudyMS/blob/master/demo.png)
