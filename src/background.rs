@@ -6,6 +6,7 @@ use crate::utils::{cal_ax, cal_ay};
 #[reflect(Component)]
 pub struct BackEnity;
 
+//绘制背景,且背景随人物移动
 pub fn background(
     time: Res<Time>,
     mut commands: Commands,
