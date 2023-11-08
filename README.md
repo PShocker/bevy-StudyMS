@@ -8,3 +8,8 @@
 - [✓] 物理效果
 
 ![img](demo.png)
+## 运行
+1. 本地运行
+```
+cargo run --release
+```
