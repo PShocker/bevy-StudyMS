@@ -1,7 +1,7 @@
 //! Displays a single [`Sprite`], created from an image.
 
 use animate::{animate_back, animate_player, AnimateObj};
-use background::{background, BackGround};
+use background::{background, BackGround, BackGroundEdge};
 use bevy::{asset::Asset, prelude::*, reflect::TypePath, window::WindowMode};
 use bevy_rapier2d::prelude::*;
 use camera::*;
@@ -214,6 +214,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     }
     //解析地图FootHold
     if res["FootHold"].as_array() != None {
+        let mut left=0;
+        let mut right=0;
         for foothold in res["FootHold"].as_array().unwrap() {
             // println!("{:?}", foothold);
             let foothold = FootHold {
@@ -226,6 +228,16 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 piece: foothold["Piece"].as_i64().unwrap() as i32,
                 id: foothold["ID"].as_i64().unwrap() as i32,
             };
+            if  left>min(foothold.x1,foothold.x2){
+                left=min(foothold.x1,foothold.x2)
+            }
+            if  right<max(foothold.x1,foothold.x2){
+                right=max(foothold.x1,foothold.x2)
+            }
+            commands.insert_resource(BackGroundEdge {
+                left: left as f32,
+                right: right as f32
+            });
             // commands.spawn(foothold);
             //直接用bevy_rapier2d生成地砖,使其具有物理效果
             commands.spawn((Collider::segment(
@@ -234,5 +246,15 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ),
             Friction::coefficient(0.8)));//摩擦力
         }
+        //地图左边墙壁
+        commands.spawn((Collider::segment(
+            Vec2::new(left as f32, -10000.0),
+            Vec2::new(left as f32, 10000.0),
+        ),));
+        //地图右边墙壁
+        commands.spawn((Collider::segment(
+            Vec2::new(right as f32, -10000.0),
+            Vec2::new(right as f32, 10000.0),
+        ),));
     }
 }

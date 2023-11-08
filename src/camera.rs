@@ -1,27 +1,42 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::player::Player;
-
+use crate::{
+    background::{self, BackGroundEdge},
+    player::Player,
+};
 
 // 相机最小移动距离，若小于此距离，则移动这个最小距离的长度
 const CAMERA_MIN_MOVE_DISTANCE: f32 = 0.1;
 // 每帧逼近剩余距离的百分比
 const CAMERA_MOVE_INTERPOLATE: f32 = 0.05;
 
-
 // 相机跟随角色
 pub fn camera_follow(
     mut q_camera: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     q_player: Query<&Transform, With<Player>>,
+    mut q_window: Query<&Window, With<PrimaryWindow>>,
+    backGroundEdge: Res<BackGroundEdge>,
 ) {
     if q_player.is_empty() {
         return;
     }
     let player_pos = q_player.single().translation.truncate();
     let camera_pos = q_camera.single().translation.truncate();
+    let window = q_window.get_single_mut().ok().unwrap();
+
     let mut camera_transform = q_camera.single_mut();
     if camera_pos.distance(player_pos) < 0.1 {
         // 视为已达到player位置
+        return;
+    }
+    if camera_transform.translation.x - window.width() / 2.0 < backGroundEdge.left
+        && player_pos.x - window.width() / 2.0 < backGroundEdge.left
+    {
+        return;
+    }
+    if camera_transform.translation.x + window.width() / 2.0 > backGroundEdge.right
+        && player_pos.x + window.width() / 2.0 > backGroundEdge.right
+    {
         return;
     }
     if camera_pos.distance(player_pos) < CAMERA_MIN_MOVE_DISTANCE {
