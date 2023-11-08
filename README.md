@@ -13,3 +13,5 @@
 ```
 cargo run --release
 ```
+
+A键向左行走,D键向右行走
