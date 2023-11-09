@@ -69,9 +69,6 @@ pub fn player(
         texture_atlas_builder.add_texture(handle.clone(), texture);
         last += 1;
     }
-
-    last -= 1;
-
     let stand = AnimationBundle {
         timer: AnimationTimer(Timer::from_seconds(0.9, TimerMode::Repeating)),
         indices: AnimationIndices {
@@ -101,6 +98,10 @@ pub fn player(
     };
 
     let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
+    for handle in &assets.stand {
+        println!("{:?}",texture_atlas.get_texture_index(handle));
+    }
+    
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.spawn(PlayerBundle {
