@@ -2,7 +2,7 @@
 
 use animate::{animate_back, animate_player, AnimateObj};
 use background::{background, BackGround, BackGroundEdge};
-use bevy::{asset::Asset, prelude::*, reflect::TypePath, window::WindowMode};
+use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
 use foothold::FootHold;
@@ -65,7 +65,7 @@ fn main() {
         .insert_resource(PlayerState::Standing)
         .add_systems(Update, animate_back)//背景动画
         .add_systems(Update, camera_follow)//镜头跟随
-        .add_systems(Update, player_run)//人物行走输入事件和人物方向
+        .add_systems(Update, player_run.run_if(in_state(AppState::Finished)))//人物行走输入事件和人物方向
         .add_systems(Update, background)//背景跟随
         .add_systems(Update, animate_player)//播放人物动画
         .run();

@@ -54,9 +54,6 @@ pub fn player(
     mut textures: ResMut<Assets<Image>>,
     assets: Res<PlayerAssets>,
 ) {
-    let mut first = 0;
-    let mut last = 0;
-
     let mut texture_atlas_builder = TextureAtlasBuilder::default();
     for handle in &assets.stand {
         let Some(texture) = textures.get(&handle) else {
@@ -67,16 +64,8 @@ pub fn player(
             continue;
         };
         texture_atlas_builder.add_texture(handle.clone(), texture);
-        last += 1;
     }
-    let stand = AnimationBundle {
-        timer: AnimationTimer(Timer::from_seconds(0.9, TimerMode::Repeating)),
-        indices: AnimationIndices {
-            first: first,
-            last: last,
-        },
-    };
-    first = last;
+
     for handle in &assets.walk {
         let Some(texture) = textures.get(&handle) else {
             warn!(
@@ -86,22 +75,32 @@ pub fn player(
             continue;
         };
         texture_atlas_builder.add_texture(handle.clone(), texture);
-        last += 1;
     }
+    let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
 
-    let walk = AnimationBundle {
-        timer: AnimationTimer(Timer::from_seconds(0.3, TimerMode::Repeating)),
+    let mut stand_indices = Vec::new();
+    for handle in &assets.stand {
+        stand_indices.push(texture_atlas.get_texture_index(handle).unwrap())
+    }
+    let stand = AnimationBundle {
+        timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
         indices: AnimationIndices {
-            first: first,
-            last: last,
+            index: 0,
+            sprite_indices: stand_indices,
         },
     };
+    let mut walk_indices = Vec::new();
 
-    let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
-    for handle in &assets.stand {
-        println!("{:?}",texture_atlas.get_texture_index(handle));
+    for handle in &assets.walk {
+        walk_indices.push(texture_atlas.get_texture_index(handle).unwrap())
     }
-    
+    let walk = AnimationBundle {
+        timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+        indices: AnimationIndices {
+            index: 0,
+            sprite_indices: walk_indices,
+        },
+    };
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.spawn(PlayerBundle {
@@ -111,7 +110,7 @@ pub fn player(
             transform: Transform::from_xyz(0.0, 0.0, 100.0),
             ..default()
         },
-        animation_bundle: stand,
+        animation_bundle: stand.clone(),
         rigid_body: RigidBody::Dynamic,
         rotation_constraints: LockedAxes::ROTATION_LOCKED,
         // Collider::cuboid(13.0, 32.0),
@@ -122,31 +121,58 @@ pub fn player(
         player: Player,
         facing: Facing::Right,
     });
+
+    commands.insert_resource(PlayerStateAnimate {
+        stand: stand,
+        walk: walk,
+    });
 }
 
 // 角色奔跑
 pub fn player_run(
     keyboard_input: Res<Input<KeyCode>>,
-    mut q_player: Query<(&mut Facing, &mut Velocity, &mut TextureAtlasSprite), With<Player>>,
+    mut q_player: Query<
+        (
+            &mut Facing,
+            &mut Velocity,
+            &mut TextureAtlasSprite,
+            &mut AnimationIndices,
+            &mut AnimationTimer,
+        ),
+        With<Player>,
+    >,
     mut player_state: ResMut<PlayerState>,
+    player_ani: Res<PlayerStateAnimate>,
 ) {
     if q_player.is_empty() {
         return;
     }
-    for (mut facing, mut velocity, mut sprite) in &mut q_player {
+    for (mut facing, mut velocity, mut sprite, mut indices,mut timer) in &mut q_player {
         if keyboard_input.pressed(KeyCode::A) {
+            if *player_state == PlayerState::Standing {
+                *player_state = PlayerState::Walking;
+                *indices = player_ani.walk.indices.clone();
+                *timer = player_ani.walk.timer.clone();
+            }
             *facing = Facing::Left;
             velocity.linvel.x = -180.0;
             sprite.flip_x = false;
-            *player_state = PlayerState::Walking;
         } else if keyboard_input.pressed(KeyCode::D) {
+            if *player_state == PlayerState::Standing {
+                *player_state = PlayerState::Walking;
+                *indices = player_ani.walk.indices.clone();
+                *timer = player_ani.walk.timer.clone();
+            }
             *facing = Facing::Right;
             velocity.linvel.x = 180.0;
             sprite.flip_x = true;
-            *player_state = PlayerState::Walking;
         } else {
+            if *player_state == PlayerState::Walking {
+                *player_state = PlayerState::Standing;
+                *indices = player_ani.stand.indices.clone();
+                *timer = player_ani.stand.timer.clone();
+            }
             velocity.linvel.x = 0.0;
-            *player_state = PlayerState::Standing;
         }
     }
 }

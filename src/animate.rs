@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::time::Time;
 
 use crate::common::{AnimationIndices, AnimationTimer};
-use crate::player::Player;
+use crate::player::{Player, PlayerState, PlayerStateAnimate};
 
 //
 #[derive(Component)]
@@ -32,14 +32,13 @@ pub fn animate_player(
     for (entity, mut timer, mut indices, mut sprite) in &mut q_player {
         timer.0.tick(time.delta());
         if timer.0.just_finished() {
-            //切换到下一帧
-            if sprite.index >= indices.last - 1 {
-                //回到第一帧
-                sprite.index = indices.first;
-            } else {
-                sprite.index += 1;
-            }
-            // println!("{:?},{:?},{:?}", indices.first, indices.last,sprite.index);
+        sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
+            indices.index = 0;
+            indices.sprite_indices[indices.index]
+        } else {
+            indices.index += 1;
+            indices.sprite_indices[indices.index]
+        };
         }
     }
 }
