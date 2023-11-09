@@ -6,7 +6,7 @@ use bevy::{asset::Asset, prelude::*, reflect::TypePath, window::WindowMode};
 use bevy_rapier2d::prelude::*;
 use camera::*;
 use foothold::FootHold;
-use player::{player, player_run, setup_player_assets, PlayerAssets};
+use player::{player, player_run, setup_player_assets, PlayerAssets, PlayerState};
 use std::{
     cmp::{max, min},
     fs,
@@ -36,7 +36,13 @@ fn check_textures(
     image: ResMut<Assets<Image>>,
 ) {
     // Advance the `AppState` once all sprite handles have been loaded by the `AssetServer`
-    for handle in &assets.assets {
+    for handle in &assets.stand {
+        let Some(texture) = image.get(&handle) else {
+            continue;
+        };
+        // next_state.set(AppState::Finished);
+    }
+    for handle in &assets.walk {
         let Some(texture) = image.get(&handle) else {
             continue;
         };
@@ -56,6 +62,7 @@ fn main() {
         .add_systems(OnEnter(AppState::Setup), setup_player_assets) //先读取人物动画,否则会导致读取失败
         .add_systems(Update, check_textures.run_if(in_state(AppState::Setup)))//等待人物读取完成
         .add_systems(OnEnter(AppState::Finished), player)//生成人物
+        .insert_resource(PlayerState::Standing)
         .add_systems(Update, animate_back)//背景动画
         .add_systems(Update, camera_follow)//镜头跟随
         .add_systems(Update, player_run)//人物行走输入事件和人物方向

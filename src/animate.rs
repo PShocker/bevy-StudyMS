@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::time::Time;
 
-use crate::common::AnimationTimer;
+use crate::common::{AnimationIndices, AnimationTimer};
 use crate::player::Player;
 
 //
@@ -18,28 +18,34 @@ pub struct AnimateObj {
 //播放人物行走动画
 pub fn animate_player(
     mut commands: Commands,
-    mut q_player: Query<(Entity, &mut AnimationTimer, &mut TextureAtlasSprite), With<Player>>,
+    mut q_player: Query<
+        (
+            Entity,
+            &mut AnimationTimer,
+            &mut AnimationIndices,
+            &mut TextureAtlasSprite,
+        ),
+        With<Player>,
+    >,
     time: Res<Time>,
 ) {
-    for (entity, mut timer, mut sprite) in &mut q_player {
+    for (entity, mut timer, mut indices, mut sprite) in &mut q_player {
         timer.0.tick(time.delta());
         if timer.0.just_finished() {
+            println!("{:?},{:?}", indices.first,indices.last);
             //切换到下一帧
-            sprite.index += 1;
-            if sprite.index > 3 {
+            if sprite.index >= indices.last {
                 //回到第一帧
-                sprite.index = 0;
+                sprite.index = indices.first;
+            } else {
+                sprite.index += 1;
             }
         }
     }
 }
 
 //背景动画,背景obj的动画效果
-pub fn animate_back(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<&mut AnimateObj>,
-) {
+pub fn animate_back(time: Res<Time>, mut commands: Commands, mut query: Query<&mut AnimateObj>) {
     // println!("{:?}", time.raw_elapsed_seconds());
 
     for mut s in &mut query {
