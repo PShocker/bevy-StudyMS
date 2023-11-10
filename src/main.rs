@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
 use foothold::FootHold;
-use player::{player, player_run, setup_player_assets, PlayerAssets, PlayerState};
+use player::{player, player_run, setup_player_assets, PlayerAssets, PlayerState, StateChangeEvent};
 use std::{
     cmp::{max, min},
     fs,
@@ -68,6 +68,8 @@ fn main() {
         .add_systems(Update, player_run.run_if(in_state(AppState::Finished)))//人物行走输入事件和人物方向
         .add_systems(Update, background)//背景跟随
         .add_systems(Update, animate_player)//播放人物动画
+        .add_event::<StateChangeEvent>()
+
         .run();
 }
 

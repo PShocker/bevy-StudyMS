@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::time::Time;
 
 use crate::common::{AnimationIndices, AnimationTimer};
-use crate::player::{Player, PlayerState, PlayerStateAnimate};
+use crate::player::{Player, PlayerState, PlayerStateAnimate, StateChangeEvent};
 
 //
 #[derive(Component)]
@@ -28,17 +28,26 @@ pub fn animate_player(
         With<Player>,
     >,
     time: Res<Time>,
+    mut state_change_ev: EventReader<StateChangeEvent>,
 ) {
     for (entity, mut timer, mut indices, mut sprite) in &mut q_player {
         timer.0.tick(time.delta());
         if timer.0.just_finished() {
-        sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
-            indices.index = 0;
-            indices.sprite_indices[indices.index]
-        } else {
-            indices.index += 1;
-            indices.sprite_indices[indices.index]
-        };
+            sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
+                indices.index = 0;
+                indices.sprite_indices[indices.index]
+            } else {
+                indices.index += 1;
+                indices.sprite_indices[indices.index]
+            };
+        } else if state_change_ev.iter().next().is_some() {
+            sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
+                indices.index = 0;
+                indices.sprite_indices[indices.index]
+            } else {
+                indices.index += 1;
+                indices.sprite_indices[indices.index]
+            };
         }
     }
 }

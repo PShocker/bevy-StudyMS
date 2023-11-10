@@ -2,6 +2,12 @@ use crate::common::*;
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 use bevy_rapier2d::prelude::*;
 
+
+// 人物状态切换
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Event)]
+pub struct StateChangeEvent;
+
+
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct Player;
 
@@ -143,6 +149,7 @@ pub fn player_run(
     >,
     mut player_state: ResMut<PlayerState>,
     player_ani: Res<PlayerStateAnimate>,
+    mut state_change_ev: EventWriter<StateChangeEvent>,
 ) {
     if q_player.is_empty() {
         return;
@@ -153,6 +160,7 @@ pub fn player_run(
                 *player_state = PlayerState::Walking;
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
+                state_change_ev.send_default(); //人物状态切换
             }
             *facing = Facing::Left;
             velocity.linvel.x = -180.0;
@@ -162,6 +170,7 @@ pub fn player_run(
                 *player_state = PlayerState::Walking;
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
+                state_change_ev.send_default(); //人物状态切换
             }
             *facing = Facing::Right;
             velocity.linvel.x = 180.0;
@@ -171,6 +180,7 @@ pub fn player_run(
                 *player_state = PlayerState::Standing;
                 *indices = player_ani.stand.indices.clone();
                 *timer = player_ani.stand.timer.clone();
+                state_change_ev.send_default(); //人物状态切换
             }
             velocity.linvel.x = 0.0;
         }
