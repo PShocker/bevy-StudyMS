@@ -186,7 +186,6 @@ pub fn player_run(
                 *indices = player_ani.stand.indices.clone();
                 *timer = player_ani.stand.timer.clone();
                 state_change_ev.send_default(); //人物状态切换
-                
             }
             velocity.linvel.x = 0.0;
         }
