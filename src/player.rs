@@ -13,6 +13,7 @@ pub struct Player;
 pub struct PlayerAssets {
     pub walk: Vec<Handle<Image>>,
     pub stand: Vec<Handle<Image>>,
+    pub jump: Vec<Handle<Image>>,
 }
 
 // 脸朝向
@@ -41,6 +42,7 @@ pub struct PlayerGrounded(pub bool);
 pub struct PlayerStateAnimate {
     pub walk: AnimationBundle,
     pub stand: AnimationBundle,
+    pub jump: AnimationBundle,
 }
 
 #[derive(Clone, Default, Bundle)]
@@ -86,6 +88,17 @@ pub fn player(
         };
         texture_atlas_builder.add_texture(handle.clone(), texture);
     }
+
+    for handle in &assets.jump {
+        let Some(texture) = textures.get(&handle) else {
+            warn!(
+                "{:?} did not resolve to an `Image` asset.",
+                asset_server.get_handle_path(handle)
+            );
+            continue;
+        };
+        texture_atlas_builder.add_texture(handle.clone(), texture);
+    }
     let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
 
     let mut stand_indices = Vec::new();
@@ -99,8 +112,8 @@ pub fn player(
             sprite_indices: stand_indices,
         },
     };
-    let mut walk_indices = Vec::new();
 
+    let mut walk_indices = Vec::new();
     for handle in &assets.walk {
         walk_indices.push(texture_atlas.get_texture_index(handle).unwrap())
     }
@@ -109,6 +122,18 @@ pub fn player(
         indices: AnimationIndices {
             index: 0,
             sprite_indices: walk_indices,
+        },
+    };
+
+    let mut jump_indices = Vec::new();
+    for handle in &assets.jump {
+        jump_indices.push(texture_atlas.get_texture_index(handle).unwrap())
+    }
+    let jump = AnimationBundle {
+        timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+        indices: AnimationIndices {
+            index: 0,
+            sprite_indices: jump_indices,
         },
     };
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
@@ -138,6 +163,7 @@ pub fn player(
     commands.insert_resource(PlayerStateAnimate {
         stand: stand,
         walk: walk,
+        jump: jump,
     });
 }
 
@@ -195,7 +221,6 @@ pub fn player_run(
 
         if keyboard_input.pressed(KeyCode::AltLeft) {
             if player_grounded.0 {
-                *player_state = PlayerState::Jumping;
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
                 state_change_ev.send_default(); //人物状态切换
@@ -209,17 +234,36 @@ pub fn player_run(
 pub fn player_grounded_detect(
     mut player_grounded: ResMut<PlayerGrounded>,
     mut contact_force_events: EventReader<ContactForceEvent>,
+    mut player_state: ResMut<PlayerState>,
+    mut q_player: Query<
+        (
+            &mut TextureAtlasSprite,
+            &mut AnimationIndices,
+            &mut AnimationTimer,
+        ),
+        With<Player>,
+    >,
+    player_ani: Res<PlayerStateAnimate>,
+    mut state_change_ev: EventWriter<StateChangeEvent>,
 ) {
     // for contact_force_event in contact_force_events.iter() {
     //     println!("Received contact force event: {contact_force_event:?}");
     // }
-    if contact_force_events.iter().next().is_some(){
+    if contact_force_events.iter().next().is_some() {
         player_grounded.0 = true;
-    }else {
+    } else {
         player_grounded.0 = false;
+        for (mut sprite, mut indices, mut timer) in &mut q_player {
+            if *player_state != PlayerState::Jumping {
+                *player_state = PlayerState::Jumping;
+                *indices = player_ani.jump.indices.clone();
+                state_change_ev.send_default();
+            }
+
+            // state_change_ev.send_default(); //人物状态切换
+        }
     }
 }
-
 
 pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut walk: Vec<Handle<Image>> = Vec::new();
@@ -233,8 +277,12 @@ pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer
     stand.push(asset_server.load("stand1.png"));
     stand.push(asset_server.load("stand2.png"));
 
+    let mut jump: Vec<Handle<Image>> = Vec::new();
+    jump.push(asset_server.load("jump0.png"));
+
     commands.insert_resource(PlayerAssets {
         stand: stand,
         walk: walk,
+        jump: jump,
     });
 }

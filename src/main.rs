@@ -72,7 +72,7 @@ fn main() {
         .add_systems(Update, player_run.run_if(in_state(AppState::Finished))) //人物行走输入事件和人物方向
         .add_systems(Update, background) //背景跟随
         .add_systems(Update, animate_player) //播放人物动画
-        .add_systems(PostUpdate, player_grounded_detect)
+        .add_systems(PostUpdate, player_grounded_detect.run_if(in_state(AppState::Finished)))
         .add_event::<StateChangeEvent>()
         .run();
 }
