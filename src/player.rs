@@ -259,7 +259,6 @@ pub fn player_grounded_detect(
                 *indices = player_ani.jump.indices.clone();
                 state_change_ev.send_default();
             }
-
             // state_change_ev.send_default(); //人物状态切换
         }
     }
