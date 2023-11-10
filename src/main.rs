@@ -6,7 +6,10 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
 use foothold::FootHold;
-use player::{player, player_run, setup_player_assets, PlayerAssets, PlayerState, StateChangeEvent, player_grounded_detect, PlayerGrounded};
+use player::{
+    player, player_grounded_detect, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
+    PlayerState, StateChangeEvent,
+};
 use std::{
     cmp::{max, min},
     fs,
@@ -27,6 +30,19 @@ enum AppState {
     #[default]
     Setup,
     Finished,
+}
+
+fn display_events(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut contact_force_events: EventReader<ContactForceEvent>,
+) {
+    for collision_event in collision_events.iter() {
+        println!("Received collision event: {collision_event:?}");
+    }
+
+    for contact_force_event in contact_force_events.iter() {
+        println!("Received contact force event: {contact_force_event:?}");
+    }
 }
 
 //等待人物动作加载完成
@@ -58,19 +74,22 @@ fn main() {
             RapierDebugRenderPlugin::default(),
         ))
         .add_state::<AppState>()
-        .add_systems(Startup, setup)//初始化
+        .add_systems(Startup, setup) //初始化
         .add_systems(OnEnter(AppState::Setup), setup_player_assets) //先读取人物动画,否则会导致读取失败
-        .add_systems(Update, check_textures.run_if(in_state(AppState::Setup)))//等待人物读取完成
-        .add_systems(OnEnter(AppState::Finished), player)//生成人物
+        .add_systems(Update, check_textures.run_if(in_state(AppState::Setup))) //等待人物读取完成
+        .add_systems(OnEnter(AppState::Finished), player) //生成人物
         .insert_resource(PlayerState::Standing)
         .insert_resource(PlayerGrounded(false))
-        .add_systems(Update, animate_back)//背景动画
-        .add_systems(Update, camera_follow)//镜头跟随
-        .add_systems(Update, (player_run,player_grounded_detect).run_if(in_state(AppState::Finished)))//人物行走输入事件和人物方向
-        .add_systems(Update, background)//背景跟随
-        .add_systems(Update, animate_player)//播放人物动画
+        .add_systems(Update, animate_back) //背景动画
+        .add_systems(Update, camera_follow) //镜头跟随
+        .add_systems(
+            Update,
+            (player_run, player_grounded_detect).run_if(in_state(AppState::Finished)),
+        ) //人物行走输入事件和人物方向
+        .add_systems(Update, background) //背景跟随
+        .add_systems(Update, animate_player) //播放人物动画
+        .add_systems(PostUpdate, display_events)
         .add_event::<StateChangeEvent>()
-
         .run();
 }
 
@@ -224,8 +243,8 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     }
     //解析地图FootHold
     if res["FootHold"].as_array() != None {
-        let mut left=0;
-        let mut right=0;
+        let mut left = 0;
+        let mut right = 0;
         for foothold in res["FootHold"].as_array().unwrap() {
             // println!("{:?}", foothold);
             let foothold = FootHold {
@@ -238,23 +257,25 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 piece: foothold["Piece"].as_i64().unwrap() as i32,
                 id: foothold["ID"].as_i64().unwrap() as i32,
             };
-            if  left>min(foothold.x1,foothold.x2){
-                left=min(foothold.x1,foothold.x2)
+            if left > min(foothold.x1, foothold.x2) {
+                left = min(foothold.x1, foothold.x2)
             }
-            if  right<max(foothold.x1,foothold.x2){
-                right=max(foothold.x1,foothold.x2)
+            if right < max(foothold.x1, foothold.x2) {
+                right = max(foothold.x1, foothold.x2)
             }
             commands.insert_resource(BackGroundEdge {
                 left: left as f32,
-                right: right as f32
+                right: right as f32,
             });
             // commands.spawn(foothold);
             //直接用bevy_rapier2d生成地砖,使其具有物理效果
-            commands.spawn((Collider::segment(
-                Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
-                Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
-            ),
-            Friction::coefficient(0.8)));//摩擦力
+            commands.spawn((
+                Collider::segment(
+                    Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
+                    Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+                ),
+                Friction::coefficient(1.0),
+            )); //摩擦力
         }
         //地图左边墙壁
         commands.spawn((Collider::segment(

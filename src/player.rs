@@ -113,24 +113,27 @@ pub fn player(
     };
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    commands.spawn(PlayerBundle {
-        sprite_bundle: SpriteSheetBundle {
-            sprite: TextureAtlasSprite::new(0),
-            texture_atlas: texture_atlas_handle.clone(),
-            transform: Transform::from_xyz(0.0, 0.0, 100.0),
-            ..default()
+    commands.spawn((
+        PlayerBundle {
+            sprite_bundle: SpriteSheetBundle {
+                sprite: TextureAtlasSprite::new(0),
+                texture_atlas: texture_atlas_handle.clone(),
+                transform: Transform::from_xyz(0.0, 0.0, 100.0),
+                ..default()
+            },
+            animation_bundle: stand.clone(),
+            rigid_body: RigidBody::Dynamic,
+            rotation_constraints: LockedAxes::ROTATION_LOCKED,
+            // Collider::cuboid(13.0, 32.0),
+            collider: Collider::round_cuboid(7.0, 24.0, 0.1),
+            velocity: Velocity::zero(),
+            restitution: Restitution::new(0.0),
+            gravity_scale: GravityScale(14.0),
+            player: Player,
+            facing: Facing::Right,
         },
-        animation_bundle: stand.clone(),
-        rigid_body: RigidBody::Dynamic,
-        rotation_constraints: LockedAxes::ROTATION_LOCKED,
-        // Collider::cuboid(13.0, 32.0),
-        collider: Collider::round_cuboid(7.0, 24.0, 0.1),
-        velocity: Velocity::zero(),
-        restitution: Restitution::new(0.0),
-        gravity_scale: GravityScale(14.0),
-        player: Player,
-        facing: Facing::Right,
-    });
+        ActiveEvents::CONTACT_FORCE_EVENTS,
+    ));
 
     commands.insert_resource(PlayerStateAnimate {
         stand: stand,
@@ -223,11 +226,11 @@ pub fn player_grounded_detect(
     if last.1 == 5 && !player_grounded.0 {
         //接触到地面
         player_grounded.0 = true;
-        println!("player_grounded:{:?}", player_grounded);
+        // println!("player_grounded:{:?}", player_grounded);
     } else if last.1 < 2 && player_grounded.0 {
         //在空中
         player_grounded.0 = false;
-        println!("player_grounded:{:?}", player_grounded);
+        // println!("player_grounded:{:?}", player_grounded);
     }
 
     last.0 = (pos.y * 10.).round();
