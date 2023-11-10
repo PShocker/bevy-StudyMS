@@ -32,6 +32,11 @@ pub enum PlayerState {
     Jumping,
 }
 
+// 角色是否在地面上
+#[derive(Debug, Default, Resource, Reflect)]
+#[reflect(Resource)]
+pub struct PlayerGrounded(pub bool);
+
 #[derive(Debug, Resource)]
 pub struct PlayerStateAnimate {
     pub walk: AnimationBundle,
@@ -122,7 +127,7 @@ pub fn player(
         collider: Collider::round_cuboid(7.0, 24.0, 0.1),
         velocity: Velocity::zero(),
         restitution: Restitution::new(0.0),
-        gravity_scale: GravityScale(12.0),
+        gravity_scale: GravityScale(14.0),
         player: Player,
         facing: Facing::Right,
     });
@@ -149,49 +154,82 @@ pub fn player_run(
     mut player_state: ResMut<PlayerState>,
     player_ani: Res<PlayerStateAnimate>,
     mut state_change_ev: EventWriter<StateChangeEvent>,
+    mut player_grounded: ResMut<PlayerGrounded>,
 ) {
     if q_player.is_empty() {
         return;
     }
     for (mut facing, mut velocity, mut sprite, mut indices, mut timer) in &mut q_player {
         if keyboard_input.pressed(KeyCode::A) {
-            if *player_state != PlayerState::Walking {
+            if *player_state != PlayerState::Walking && player_grounded.0 {
                 *player_state = PlayerState::Walking;
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
                 state_change_ev.send_default(); //人物状态切换
             }
             *facing = Facing::Left;
-            velocity.linvel.x = -180.0;
             sprite.flip_x = false;
+            velocity.linvel.x = -180.0;
         } else if keyboard_input.pressed(KeyCode::D) {
-            if *player_state != PlayerState::Walking {
+            if *player_state != PlayerState::Walking && player_grounded.0 {
                 *player_state = PlayerState::Walking;
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
                 state_change_ev.send_default(); //人物状态切换
             }
             *facing = Facing::Right;
-            velocity.linvel.x = 180.0;
             sprite.flip_x = true;
-        } else if keyboard_input.pressed(KeyCode::AltLeft) {
-            if *player_state != PlayerState::Jumping {
-                *player_state = PlayerState::Jumping;
-                *indices = player_ani.walk.indices.clone();
-                *timer = player_ani.walk.timer.clone();
-                state_change_ev.send_default(); //人物状态切换
-            }
-            velocity.linvel.y = 180.0;
+            velocity.linvel.x = 180.0;
         } else {
-            if *player_state != PlayerState::Standing {
+            if *player_state != PlayerState::Standing && player_grounded.0 {
                 *player_state = PlayerState::Standing;
                 *indices = player_ani.stand.indices.clone();
                 *timer = player_ani.stand.timer.clone();
                 state_change_ev.send_default(); //人物状态切换
+                
             }
             velocity.linvel.x = 0.0;
         }
+
+        if keyboard_input.pressed(KeyCode::AltLeft) {
+            if player_grounded.0 {
+                *player_state = PlayerState::Jumping;
+                *indices = player_ani.walk.indices.clone();
+                *timer = player_ani.walk.timer.clone();
+                state_change_ev.send_default(); //人物状态切换
+                velocity.linvel.y = 300.0;
+            }
+        }
     }
+}
+
+pub fn player_grounded_detect(
+    q_player: Query<&Transform, With<Player>>,
+    mut player_grounded: ResMut<PlayerGrounded>,
+    mut last: Local<(f32, isize)>,
+    mut player_state: ResMut<PlayerState>,
+) {
+    if q_player.is_empty() {
+        return;
+    }
+    // 通过检测y轴坐标连续多帧是否变化来判断落地
+    let pos = q_player.single().translation.truncate();
+    if (pos.y * 10.).round() == last.0 {
+        last.1 += 1;
+    } else {
+        last.1 -= 1;
+    }
+    last.1 = last.1.clamp(0, 5);
+
+    if last.1 == 5 && !player_grounded.0 {
+        //接触到地面
+        player_grounded.0 = true;
+    } else if last.1 < 2 && player_grounded.0 {
+        //在空中
+        player_grounded.0 = false;
+    }
+
+    last.0 = (pos.y * 10.).round();
 }
 
 pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
