@@ -196,7 +196,7 @@ pub fn player_run(
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
                 state_change_ev.send_default(); //人物状态切换
-                velocity.linvel.y = 300.0;
+                velocity.linvel.y = 400.0;
             }
         }
     }
@@ -223,9 +223,11 @@ pub fn player_grounded_detect(
     if last.1 == 5 && !player_grounded.0 {
         //接触到地面
         player_grounded.0 = true;
+        println!("player_grounded:{:?}", player_grounded);
     } else if last.1 < 2 && player_grounded.0 {
         //在空中
         player_grounded.0 = false;
+        println!("player_grounded:{:?}", player_grounded);
     }
 
     last.0 = (pos.y * 10.).round();
