@@ -2,11 +2,9 @@ use crate::common::*;
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 use bevy_rapier2d::prelude::*;
 
-
 // 人物状态切换
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Event)]
 pub struct StateChangeEvent;
-
 
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct Player;
@@ -31,6 +29,7 @@ pub enum PlayerState {
     #[default]
     Standing,
     Walking,
+    Jumping,
 }
 
 #[derive(Debug, Resource)]
@@ -154,9 +153,9 @@ pub fn player_run(
     if q_player.is_empty() {
         return;
     }
-    for (mut facing, mut velocity, mut sprite, mut indices,mut timer) in &mut q_player {
+    for (mut facing, mut velocity, mut sprite, mut indices, mut timer) in &mut q_player {
         if keyboard_input.pressed(KeyCode::A) {
-            if *player_state == PlayerState::Standing {
+            if *player_state != PlayerState::Walking {
                 *player_state = PlayerState::Walking;
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
@@ -166,7 +165,7 @@ pub fn player_run(
             velocity.linvel.x = -180.0;
             sprite.flip_x = false;
         } else if keyboard_input.pressed(KeyCode::D) {
-            if *player_state == PlayerState::Standing {
+            if *player_state != PlayerState::Walking {
                 *player_state = PlayerState::Walking;
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
@@ -175,8 +174,16 @@ pub fn player_run(
             *facing = Facing::Right;
             velocity.linvel.x = 180.0;
             sprite.flip_x = true;
+        } else if keyboard_input.pressed(KeyCode::AltLeft) {
+            if *player_state != PlayerState::Jumping {
+                *player_state = PlayerState::Jumping;
+                *indices = player_ani.walk.indices.clone();
+                *timer = player_ani.walk.timer.clone();
+                state_change_ev.send_default(); //人物状态切换
+            }
+            velocity.linvel.y = 180.0;
         } else {
-            if *player_state == PlayerState::Walking {
+            if *player_state != PlayerState::Standing {
                 *player_state = PlayerState::Standing;
                 *indices = player_ani.stand.indices.clone();
                 *timer = player_ani.stand.timer.clone();
