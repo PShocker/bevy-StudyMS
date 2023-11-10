@@ -125,10 +125,10 @@ pub fn player(
             rigid_body: RigidBody::Dynamic,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
             // Collider::cuboid(13.0, 32.0),
-            collider: Collider::round_cuboid(7.0, 24.0, 0.1),
+            collider: Collider::round_cuboid(7.0, 24.0, 0.09),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
-            gravity_scale: GravityScale(14.0),
+            gravity_scale: GravityScale(16.0),
             player: Player,
             facing: Facing::Right,
         },
@@ -199,42 +199,27 @@ pub fn player_run(
                 *indices = player_ani.walk.indices.clone();
                 *timer = player_ani.walk.timer.clone();
                 state_change_ev.send_default(); //人物状态切换
-                velocity.linvel.y = 400.0;
+                velocity.linvel.y = 500.0;
             }
         }
     }
 }
 
+//通过碰撞检测人物是否在地面上
 pub fn player_grounded_detect(
-    q_player: Query<&Transform, With<Player>>,
     mut player_grounded: ResMut<PlayerGrounded>,
-    mut last: Local<(f32, isize)>,
-    mut player_state: ResMut<PlayerState>,
+    mut contact_force_events: EventReader<ContactForceEvent>,
 ) {
-    if q_player.is_empty() {
-        return;
-    }
-    // 通过检测y轴坐标连续多帧是否变化来判断落地
-    let pos = q_player.single().translation.truncate();
-    if (pos.y * 10.).round() == last.0 {
-        last.1 += 1;
-    } else {
-        last.1 -= 1;
-    }
-    last.1 = last.1.clamp(0, 5);
-
-    if last.1 == 5 && !player_grounded.0 {
-        //接触到地面
+    // for contact_force_event in contact_force_events.iter() {
+    //     println!("Received contact force event: {contact_force_event:?}");
+    // }
+    if contact_force_events.iter().next().is_some(){
         player_grounded.0 = true;
-        // println!("player_grounded:{:?}", player_grounded);
-    } else if last.1 < 2 && player_grounded.0 {
-        //在空中
+    }else {
         player_grounded.0 = false;
-        // println!("player_grounded:{:?}", player_grounded);
     }
-
-    last.0 = (pos.y * 10.).round();
 }
+
 
 pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut walk: Vec<Handle<Image>> = Vec::new();

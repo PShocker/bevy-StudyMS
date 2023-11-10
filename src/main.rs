@@ -7,8 +7,8 @@ use bevy_rapier2d::prelude::*;
 use camera::*;
 use foothold::FootHold;
 use player::{
-    player, player_grounded_detect, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
-    PlayerState, StateChangeEvent,
+    player, player_run, setup_player_assets, PlayerAssets,
+    PlayerGrounded, PlayerState, StateChangeEvent, player_grounded_detect,
 };
 use std::{
     cmp::{max, min},
@@ -30,19 +30,6 @@ enum AppState {
     #[default]
     Setup,
     Finished,
-}
-
-fn display_events(
-    mut collision_events: EventReader<CollisionEvent>,
-    mut contact_force_events: EventReader<ContactForceEvent>,
-) {
-    for collision_event in collision_events.iter() {
-        println!("Received collision event: {collision_event:?}");
-    }
-
-    for contact_force_event in contact_force_events.iter() {
-        println!("Received contact force event: {contact_force_event:?}");
-    }
 }
 
 //等待人物动作加载完成
@@ -82,13 +69,10 @@ fn main() {
         .insert_resource(PlayerGrounded(false))
         .add_systems(Update, animate_back) //背景动画
         .add_systems(Update, camera_follow) //镜头跟随
-        .add_systems(
-            Update,
-            (player_run, player_grounded_detect).run_if(in_state(AppState::Finished)),
-        ) //人物行走输入事件和人物方向
+        .add_systems(Update, player_run.run_if(in_state(AppState::Finished))) //人物行走输入事件和人物方向
         .add_systems(Update, background) //背景跟随
         .add_systems(Update, animate_player) //播放人物动画
-        .add_systems(PostUpdate, display_events)
+        .add_systems(PostUpdate, player_grounded_detect)
         .add_event::<StateChangeEvent>()
         .run();
 }
