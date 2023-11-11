@@ -1,4 +1,7 @@
-use crate::{common::*, animate::{AnimationBundle, AnimationIndices, AnimationTimer}};
+use crate::{
+    animate::{AnimationBundle, AnimationIndices, AnimationTimer},
+    state_machine::*,
+};
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 use bevy_rapier2d::prelude::*;
 
@@ -24,7 +27,7 @@ pub enum Facing {
     Right,
 }
 
-#[derive(Debug, Resource, Clone, Copy, Default, PartialEq, Eq, Reflect)]
+#[derive(Debug, Resource, Clone, Copy, Default, PartialEq, Eq, Reflect,Component)]
 #[reflect(Resource)]
 pub enum PlayerState {
     #[default]
@@ -57,6 +60,7 @@ pub struct PlayerBundle {
     pub rotation_constraints: LockedAxes,
     pub velocity: Velocity,
     pub gravity_scale: GravityScale,
+    pub state: PlayerState,
 }
 
 pub fn player(
@@ -156,6 +160,7 @@ pub fn player(
             gravity_scale: GravityScale(16.0),
             player: Player,
             facing: Facing::Right,
+            state:PlayerState::Standing,
         },
         ActiveEvents::CONTACT_FORCE_EVENTS,
     ));
@@ -190,40 +195,25 @@ pub fn player_run(
     }
     for (mut facing, mut velocity, mut sprite, mut indices, mut timer) in &mut q_player {
         if keyboard_input.pressed(KeyCode::A) {
-            if *player_state != PlayerState::Walking && player_grounded.0 {
-                *player_state = PlayerState::Walking;
-                *indices = player_ani.walk.indices.clone();
-                *timer = player_ani.walk.timer.clone();
-                state_change_ev.send_default(); //人物状态切换
+            if player_grounded.0 {
+                velocity.linvel.x = -180.0;
             }
             *facing = Facing::Left;
             sprite.flip_x = false;
-            velocity.linvel.x = -180.0;
         } else if keyboard_input.pressed(KeyCode::D) {
-            if *player_state != PlayerState::Walking && player_grounded.0 {
-                *player_state = PlayerState::Walking;
-                *indices = player_ani.walk.indices.clone();
-                *timer = player_ani.walk.timer.clone();
-                state_change_ev.send_default(); //人物状态切换
+            if player_grounded.0 {
+                velocity.linvel.x = 180.0;
             }
             *facing = Facing::Right;
             sprite.flip_x = true;
-            velocity.linvel.x = 180.0;
         } else {
-            if *player_state != PlayerState::Standing && player_grounded.0 {
-                *player_state = PlayerState::Standing;
-                *indices = player_ani.stand.indices.clone();
-                *timer = player_ani.stand.timer.clone();
-                state_change_ev.send_default(); //人物状态切换
+            if player_grounded.0 {
+                velocity.linvel.x = 0.0;
             }
-            velocity.linvel.x = 0.0;
         }
 
         if keyboard_input.pressed(KeyCode::AltLeft) {
             if player_grounded.0 {
-                *indices = player_ani.walk.indices.clone();
-                *timer = player_ani.walk.timer.clone();
-                state_change_ev.send_default(); //人物状态切换
                 velocity.linvel.y = 500.0;
             }
         }
@@ -253,14 +243,6 @@ pub fn player_grounded_detect(
         player_grounded.0 = true;
     } else {
         player_grounded.0 = false;
-        for (mut sprite, mut indices, mut timer) in &mut q_player {
-            if *player_state != PlayerState::Jumping {
-                *player_state = PlayerState::Jumping;
-                *indices = player_ani.jump.indices.clone();
-                state_change_ev.send_default();
-            }
-            // state_change_ev.send_default(); //人物状态切换
-        }
     }
 }
 

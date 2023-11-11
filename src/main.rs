@@ -10,6 +10,7 @@ use player::{
     player, player_run, setup_player_assets, PlayerAssets,
     PlayerGrounded, PlayerState, StateChangeEvent, player_grounded_detect,
 };
+use state_machine::{player_sprite_machine, player_state_machine};
 use std::{
     cmp::{max, min},
     fs,
@@ -20,7 +21,7 @@ use crate::utils::{cal_ax, cal_ay};
 mod animate;
 mod background;
 mod camera;
-mod common;
+mod state_machine;
 mod foothold;
 mod player;
 mod utils;
@@ -73,6 +74,7 @@ fn main() {
         .add_systems(Update, background) //背景跟随
         .add_systems(Update, animate_player) //播放人物动画
         .add_systems(PostUpdate, player_grounded_detect.run_if(in_state(AppState::Finished)))
+        .add_systems(PostUpdate, (player_state_machine,player_sprite_machine).run_if(in_state(AppState::Finished)))
         .add_event::<StateChangeEvent>()
         .run();
 }
