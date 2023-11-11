@@ -22,18 +22,18 @@ pub fn player_state_machine(
     let velocity = q_player.single();
 
     // Jumping状态
-    if !player_grounded.0 {
+    if !player_grounded.flag {
         *player_state = PlayerState::Jumping;
         return;
     }
 
     // Standing状态
-    if player_grounded.0 && velocity.linvel.x.abs() < 0.1 {
+    if player_grounded.flag && velocity.linvel.x.abs() < 0.1 {
         *player_state = PlayerState::Standing;
         return;
     }
     // Running状态
-    if player_grounded.0 && velocity.linvel.x.abs() > 1.0 {
+    if player_grounded.flag && velocity.linvel.x.abs() > 1.0 {
         *player_state = PlayerState::Walking;
         return;
     }

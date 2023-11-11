@@ -2,7 +2,7 @@ use crate::{
     animate::{AnimationBundle, AnimationIndices, AnimationTimer},
     state_machine::*,
 };
-use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
+use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow, transform::commands};
 use bevy_rapier2d::prelude::*;
 
 // 人物状态切换
@@ -27,7 +27,7 @@ pub enum Facing {
     Right,
 }
 
-#[derive(Debug, Resource, Clone, Copy, Default, PartialEq, Eq, Reflect,Component)]
+#[derive(Debug, Resource, Clone, Copy, Default, PartialEq, Eq, Reflect, Component)]
 #[reflect(Resource)]
 pub enum PlayerState {
     #[default]
@@ -39,7 +39,11 @@ pub enum PlayerState {
 // 角色是否在地面上
 #[derive(Debug, Default, Resource, Reflect)]
 #[reflect(Resource)]
-pub struct PlayerGrounded(pub bool);
+pub struct PlayerGrounded{
+    pub flag:bool,
+    pub enity:Option<Entity>,
+}
+
 
 #[derive(Debug, Resource)]
 pub struct PlayerStateAnimate {
@@ -160,7 +164,7 @@ pub fn player(
             gravity_scale: GravityScale(16.0),
             player: Player,
             facing: Facing::Right,
-            state:PlayerState::Standing,
+            state: PlayerState::Standing,
         },
         ActiveEvents::CONTACT_FORCE_EVENTS,
     ));
@@ -175,6 +179,7 @@ pub fn player(
 // 角色奔跑
 pub fn player_run(
     keyboard_input: Res<Input<KeyCode>>,
+    mut commands: Commands,
     mut q_player: Query<
         (
             &mut Facing,
@@ -182,6 +187,7 @@ pub fn player_run(
             &mut TextureAtlasSprite,
             &mut AnimationIndices,
             &mut AnimationTimer,
+            &mut Transform,
         ),
         With<Player>,
     >,
@@ -193,27 +199,38 @@ pub fn player_run(
     if q_player.is_empty() {
         return;
     }
-    for (mut facing, mut velocity, mut sprite, mut indices, mut timer) in &mut q_player {
+    for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform) in
+        &mut q_player
+    {
         if keyboard_input.pressed(KeyCode::A) {
-            if player_grounded.0 {
+            if player_grounded.flag {
                 velocity.linvel.x = -180.0;
             }
             *facing = Facing::Left;
             sprite.flip_x = false;
         } else if keyboard_input.pressed(KeyCode::D) {
-            if player_grounded.0 {
+            if player_grounded.flag {
                 velocity.linvel.x = 180.0;
             }
             *facing = Facing::Right;
             sprite.flip_x = true;
         } else {
-            if player_grounded.0 {
+            if player_grounded.flag {
                 velocity.linvel.x = 0.0;
             }
         }
 
-        if keyboard_input.pressed(KeyCode::AltLeft) {
-            if player_grounded.0 {
+        if keyboard_input.pressed(KeyCode::S) {
+            if keyboard_input.pressed(KeyCode::AltLeft) && player_grounded.flag {
+                // transform.translation.y -= 50.0;
+                //下跳
+                if !commands.get_entity(player_grounded.enity.unwrap()).is_none() {
+                    commands.entity(player_grounded.enity.unwrap()).despawn();
+                }
+                
+            }
+        } else if keyboard_input.pressed(KeyCode::AltLeft) {
+            if player_grounded.flag {
                 velocity.linvel.y = 500.0;
             }
         }
@@ -239,10 +256,15 @@ pub fn player_grounded_detect(
     // for contact_force_event in contact_force_events.iter() {
     //     println!("Received contact force event: {contact_force_event:?}");
     // }
-    if contact_force_events.iter().next().is_some() {
-        player_grounded.0 = true;
+    let event=contact_force_events.iter().next();
+    if event.is_some() {
+        player_grounded.flag = true;
+        // event.unwrap().collider
+        player_grounded.enity = Some(event.unwrap().collider1);
+
+        // println!("Received contact force event: {event:?}");
     } else {
-        player_grounded.0 = false;
+        player_grounded.flag = false;
     }
 }
 

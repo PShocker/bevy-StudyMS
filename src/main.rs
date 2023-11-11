@@ -59,7 +59,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins,
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
-            // RapierDebugRenderPlugin::default(),
+            RapierDebugRenderPlugin::default(),
         ))
         .add_state::<AppState>()
         .add_systems(Startup, setup) //初始化
@@ -67,7 +67,7 @@ fn main() {
         .add_systems(Update, check_textures.run_if(in_state(AppState::Setup))) //等待人物读取完成
         .add_systems(OnEnter(AppState::Finished), player) //生成人物
         .insert_resource(PlayerState::Standing)
-        .insert_resource(PlayerGrounded(false))
+        .insert_resource(PlayerGrounded { flag: false, enity: None })
         .add_systems(Update, animate_back) //背景动画
         .add_systems(Update, camera_follow) //镜头跟随
         .add_systems(Update, player_run.run_if(in_state(AppState::Finished))) //人物行走输入事件和人物方向
