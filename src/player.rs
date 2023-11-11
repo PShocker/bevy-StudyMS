@@ -1,4 +1,4 @@
-use crate::common::*;
+use crate::{common::*, animate::{AnimationBundle, AnimationIndices, AnimationTimer}};
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 use bevy_rapier2d::prelude::*;
 
