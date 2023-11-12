@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use bevy::time::Time;
 
-
 use crate::player::{Player, PlayerState, PlayerStateAnimate, StateChangeEvent};
 
 #[derive(Component, Clone, Default, Debug)]
@@ -18,7 +17,6 @@ pub struct AnimationBundle {
     pub timer: AnimationTimer,
     pub indices: AnimationIndices,
 }
-
 
 //
 #[derive(Component)]
@@ -45,8 +43,14 @@ pub fn animate_player(
     >,
     time: Res<Time>,
     mut state_change_ev: EventReader<StateChangeEvent>,
+    mut player_state: ResMut<PlayerState>,
 ) {
     for (entity, mut timer, mut indices, mut sprite) in &mut q_player {
+        if *player_state == PlayerState::Prone {
+            sprite.anchor = bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.20));
+        } else {
+            sprite.anchor = bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.40));
+        }
         timer.0.tick(time.delta());
         if timer.0.just_finished() {
             sprite.index = if indices.index == indices.sprite_indices.len() - 1 {

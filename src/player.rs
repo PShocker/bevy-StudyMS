@@ -271,8 +271,10 @@ pub fn player_run(
             if player_grounded.flag {
                 velocity.linvel.y = 500.0;
             }
+        }else {
+            *player_state=PlayerState::Standing;
         }
-        *player_state=PlayerState::Standing;
+        // 
     }
 }
 

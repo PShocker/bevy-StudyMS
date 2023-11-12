@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{Bundle, Component, EventWriter, Input, KeyCode, Query, Res, ResMut, With},
+    prelude::{Bundle, Component, EventWriter, Input, KeyCode, Query, Res, ResMut, With, Vec2},
     sprite::TextureAtlasSprite,
     time::Timer,
 };
@@ -88,7 +88,7 @@ pub fn player_sprite_machine(
                 *indices = player_ani.prone.indices.clone();
                 *timer = player_ani.prone.timer.clone();
                 state_change_ev.send_default();
-            }
+            },
         }
     }
 }
