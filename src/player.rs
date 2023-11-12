@@ -1,7 +1,7 @@
 use crate::{
     animate::{AnimationBundle, AnimationIndices, AnimationTimer},
     state_machine::*,
-    AppState,
+    AppState, customfilter::CustomFilterTag,
 };
 use bevy::{
     prelude::*, render::render_phase::PhaseItem, transform::commands, window::PrimaryWindow,
@@ -46,7 +46,6 @@ pub enum PlayerState {
 #[reflect(Resource)]
 pub struct PlayerGrounded {
     pub flag: bool,
-    pub enity: Option<Entity>,
 }
 
 #[derive(Debug, Resource)]
@@ -202,6 +201,7 @@ pub fn player(
             state: PlayerState::Standing,
         },
         ActiveEvents::CONTACT_FORCE_EVENTS,
+        CustomFilterTag::GroupA,
     ));
 
     commands.insert_resource(PlayerStateAnimate {
@@ -226,6 +226,7 @@ pub fn player_run(
             &mut AnimationTimer,
             &mut Transform,
             &mut PlayerState,
+            &mut CustomFilterTag,
         ),
         With<Player>,
     >,
@@ -238,31 +239,21 @@ pub fn player_run(
         return;
     }
 
-    for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform, mut state) in
+    for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform, mut state,mut customfiltertag) in
         &mut q_player
     {
         if keyboard_input.pressed(KeyCode::Down) && player_grounded.flag {
             if keyboard_input.pressed(KeyCode::AltLeft) && player_grounded.flag {
                 // transform.translation.y -= 50.0;
                 //下跳
-                if !commands
-                    .get_entity(player_grounded.enity.unwrap())
-                    .is_none()
-                {
-                    // commands.entity(player_grounded.enity.unwrap()).despawn();
-                    commands
-                        .entity(player_grounded.enity.unwrap())
-                        .remove::<Collider>();
-                }
-            } else if player_grounded.flag
-                && !(keyboard_input.pressed(KeyCode::Left)
-                    || keyboard_input.pressed(KeyCode::Right))
-            {
+                *customfiltertag=CustomFilterTag::GroupB;
+                
+            } else if player_grounded.flag {
                 *player_state = PlayerState::Prone;
                 *indices = player_ani.prone.indices.clone();
                 *timer = player_ani.prone.timer.clone();
                 state_change_ev.send_default();
-                *state=PlayerState::Prone;
+                *state = PlayerState::Prone;
                 return;
             }
         } else if keyboard_input.pressed(KeyCode::AltLeft) {
@@ -300,9 +291,7 @@ pub fn player_grounded_detect(
     mut player_state: ResMut<PlayerState>,
     mut q_player: Query<
         (
-            &mut TextureAtlasSprite,
-            &mut AnimationIndices,
-            &mut AnimationTimer,
+            &mut CustomFilterTag,
         ),
         With<Player>,
     >,
@@ -312,14 +301,11 @@ pub fn player_grounded_detect(
     // for contact_force_event in contact_force_events.iter() {
     //     println!("Received contact force event: {contact_force_event:?}");
     // }
+    let mut tags=q_player.single_mut();
     let event = contact_force_events.iter().next();
     if event.is_some() {
         player_grounded.flag = true;
-        // event.unwrap().collider
-        player_grounded.enity = Some(event.unwrap().collider1);
-
-        // println!("Received contact force event: {event:?}");
-    } else {
+    } else {  
         player_grounded.flag = false;
     }
 }

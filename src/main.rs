@@ -5,6 +5,7 @@ use background::{background, BackGround, BackGroundEdge};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
+use customfilter::{CustomFilterTag, SameUserDataFilter};
 use foothold::FootHold;
 use player::{
     player, player_grounded_detect, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
@@ -21,6 +22,7 @@ use crate::utils::{cal_ax, cal_ay};
 mod animate;
 mod background;
 mod camera;
+mod customfilter;
 mod foothold;
 mod player;
 mod state_machine;
@@ -60,8 +62,8 @@ fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
-            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
-            // RapierDebugRenderPlugin::default(),//显示碰撞线
+            RapierPhysicsPlugin::<SameUserDataFilter>::pixels_per_meter(100.0),
+            RapierDebugRenderPlugin::default(), //显示碰撞线
         ))
         .add_state::<AppState>()
         .add_systems(Startup, setup) //初始化
@@ -72,10 +74,7 @@ fn main() {
         ) //等待人物读取完成
         .add_systems(OnEnter(AppState::TextFinished), player) //生成人物
         .insert_resource(PlayerState::Standing)
-        .insert_resource(PlayerGrounded {
-            flag: false,
-            enity: None,
-        })
+        .insert_resource(PlayerGrounded { flag: false })
         .add_systems(Update, animate_back) //背景动画
         .add_systems(Update, camera_follow) //镜头跟随
         .add_systems(
@@ -286,6 +285,8 @@ fn setup(
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
                 Friction::coefficient(1.0),
+                CustomFilterTag::GroupA,
+                ActiveHooks::FILTER_CONTACT_PAIRS,
             )); //摩擦力
         }
         //地图左边墙壁
