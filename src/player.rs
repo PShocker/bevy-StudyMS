@@ -1,6 +1,6 @@
 use crate::{
     animate::{AnimationBundle, AnimationIndices, AnimationTimer},
-    state_machine::*,
+    state_machine::*, AppState,
 };
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow, transform::commands};
 use bevy_rapier2d::prelude::*;
@@ -76,6 +76,8 @@ pub fn player(
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Image>>,
     assets: Res<PlayerAssets>,
+    mut next_state: ResMut<NextState<AppState>>,
+
 ) {
     let mut texture_atlas_builder = TextureAtlasBuilder::default();
     for handle in &assets.stand {
@@ -207,6 +209,8 @@ pub fn player(
         jump: jump,
         prone:prone,
     });
+    next_state.set(AppState::PlayerFinished);
+
 }
 
 // 角色奔跑
@@ -248,16 +252,17 @@ pub fn player_run(
                 
             }else if player_grounded.flag{
                 *player_state=PlayerState::Prone;
+                *indices = player_ani.prone.indices.clone();
+                *timer = player_ani.prone.timer.clone();
+                state_change_ev.send_default();
                 return;
             }
         } else if keyboard_input.pressed(KeyCode::AltLeft) {
             if player_grounded.flag {
                 velocity.linvel.y = 500.0;
             }
-        }else if player_grounded.flag{
-            *player_state=PlayerState::Standing;
         }
-        
+
         if keyboard_input.pressed(KeyCode::Left) {
             if player_grounded.flag {
                 velocity.linvel.x = -180.0;

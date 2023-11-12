@@ -7,8 +7,8 @@ use bevy_rapier2d::prelude::*;
 use camera::*;
 use foothold::FootHold;
 use player::{
-    player, player_run, setup_player_assets, PlayerAssets,
-    PlayerGrounded, PlayerState, StateChangeEvent, player_grounded_detect,
+    player, player_grounded_detect, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
+    PlayerState, StateChangeEvent,
 };
 use state_machine::{player_sprite_machine, player_state_machine};
 use std::{
@@ -21,16 +21,18 @@ use crate::utils::{cal_ax, cal_ay};
 mod animate;
 mod background;
 mod camera;
-mod state_machine;
 mod foothold;
 mod player;
+mod state_machine;
 mod utils;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, States)]
-enum AppState {
+pub enum AppState {
     #[default]
     Setup,
-    Finished,
+    SetupFinished,
+    TextFinished,
+    PlayerFinished,
 }
 
 //等待人物动作加载完成
@@ -50,7 +52,7 @@ fn check_textures(
         let Some(texture) = image.get(&handle) else {
             continue;
         };
-        next_state.set(AppState::Finished);
+        next_state.set(AppState::TextFinished);
     }
 }
 
@@ -64,22 +66,45 @@ fn main() {
         .add_state::<AppState>()
         .add_systems(Startup, setup) //初始化
         .add_systems(OnEnter(AppState::Setup), setup_player_assets) //先读取人物动画,否则会导致读取失败
-        .add_systems(Update, check_textures.run_if(in_state(AppState::Setup))) //等待人物读取完成
-        .add_systems(OnEnter(AppState::Finished), player) //生成人物
+        .add_systems(
+            Update,
+            check_textures.run_if(in_state(AppState::SetupFinished)),
+        ) //等待人物读取完成
+        .add_systems(OnEnter(AppState::TextFinished), player) //生成人物
         .insert_resource(PlayerState::Standing)
-        .insert_resource(PlayerGrounded { flag: false, enity: None })
+        .insert_resource(PlayerGrounded {
+            flag: false,
+            enity: None,
+        })
         .add_systems(Update, animate_back) //背景动画
         .add_systems(Update, camera_follow) //镜头跟随
-        .add_systems(Update, player_run.run_if(in_state(AppState::Finished))) //人物行走输入事件和人物方向
+        .add_systems(
+            Update,
+            player_run.run_if(in_state(AppState::PlayerFinished)),
+        ) //人物行走输入事件和人物方向
         .add_systems(Update, background) //背景跟随
-        .add_systems(Update, animate_player) //播放人物动画
-        .add_systems(PostUpdate, player_grounded_detect.run_if(in_state(AppState::Finished)))
-        .add_systems(PostUpdate, (player_state_machine,player_sprite_machine).run_if(in_state(AppState::Finished)))
+        .add_systems(
+            Update,
+            animate_player.run_if(in_state(AppState::PlayerFinished)),
+        ) //播放人物动画
+        .add_systems(
+            PostUpdate,
+            player_grounded_detect.run_if(in_state(AppState::PlayerFinished)),
+        )
+        .add_systems(
+            PostUpdate,
+            (player_state_machine, player_sprite_machine)
+                .run_if(in_state(AppState::PlayerFinished)),
+        )
         .add_event::<StateChangeEvent>()
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
     //读取地图json,json文件参考 https://github.com/Kagamia/MapRenderWeb.git
     //参考https://www.bilibili.com/video/BV1ou4y1o7XZ/
     let path = "./assets/Map/Map/Map0/000010000.json";
@@ -274,4 +299,5 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             Vec2::new(right as f32, 10000.0),
         ),));
     }
+    next_state.set(AppState::SetupFinished);
 }

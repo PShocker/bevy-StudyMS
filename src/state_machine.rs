@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{Bundle, Component, EventWriter, Input, KeyCode, Query, Res, ResMut, With, Vec2},
+    prelude::{Bundle, Component, EventWriter, Input, KeyCode, Query, Res, ResMut, Vec2, With},
     sprite::TextureAtlasSprite,
     time::Timer,
 };
@@ -28,7 +28,8 @@ pub fn player_state_machine(
     }
 
     // Standing状态
-    if player_grounded.flag && velocity.linvel.x.abs() < 0.1 && *player_state!=PlayerState::Prone{
+    if player_grounded.flag && velocity.linvel.x.abs() < 0.1 && *player_state != PlayerState::Prone
+    {
         *player_state = PlayerState::Standing;
         return;
     }
@@ -84,11 +85,13 @@ pub fn player_sprite_machine(
                 }
             }
             PlayerState::Prone => {
-                *state = PlayerState::Prone;
-                *indices = player_ani.prone.indices.clone();
-                *timer = player_ani.prone.timer.clone();
-                state_change_ev.send_default();
-            },
+                if *state != PlayerState::Prone {
+                    *state = PlayerState::Prone;
+                    *indices = player_ani.prone.indices.clone();
+                    *timer = player_ani.prone.timer.clone();
+                    state_change_ev.send_default();
+                }
+            }
         }
     }
 }
