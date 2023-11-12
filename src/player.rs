@@ -207,13 +207,13 @@ pub fn player_run(
     for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform) in
         &mut q_player
     {
-        if keyboard_input.pressed(KeyCode::A) {
+        if keyboard_input.pressed(KeyCode::Left) {
             if player_grounded.flag {
                 velocity.linvel.x = -180.0;
             }
             *facing = Facing::Left;
             sprite.flip_x = false;
-        } else if keyboard_input.pressed(KeyCode::D) {
+        } else if keyboard_input.pressed(KeyCode::Right) {
             if player_grounded.flag {
                 velocity.linvel.x = 180.0;
             }
@@ -225,7 +225,7 @@ pub fn player_run(
             }
         }
 
-        if keyboard_input.pressed(KeyCode::S) {
+        if keyboard_input.pressed(KeyCode::Down) {
             if keyboard_input.pressed(KeyCode::AltLeft) && player_grounded.flag {
                 // transform.translation.y -= 50.0;
                 //下跳
