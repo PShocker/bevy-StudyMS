@@ -236,23 +236,6 @@ pub fn player_run(
     for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform) in
         &mut q_player
     {
-        if keyboard_input.pressed(KeyCode::Left) {
-            if player_grounded.flag {
-                velocity.linvel.x = -180.0;
-            }
-            *facing = Facing::Left;
-            sprite.flip_x = false;
-        } else if keyboard_input.pressed(KeyCode::Right) {
-            if player_grounded.flag {
-                velocity.linvel.x = 180.0;
-            }
-            *facing = Facing::Right;
-            sprite.flip_x = true;
-        } else {
-            if player_grounded.flag {
-                velocity.linvel.x = 0.0;
-            }
-        }
 
         if keyboard_input.pressed(KeyCode::Down) && player_grounded.flag{
             if keyboard_input.pressed(KeyCode::AltLeft) && player_grounded.flag {
@@ -274,6 +257,26 @@ pub fn player_run(
         }else if player_grounded.flag{
             *player_state=PlayerState::Standing;
         }
+        
+        if keyboard_input.pressed(KeyCode::Left) {
+            if player_grounded.flag {
+                velocity.linvel.x = -180.0;
+            }
+            *facing = Facing::Left;
+            sprite.flip_x = false;
+        } else if keyboard_input.pressed(KeyCode::Right) {
+            if player_grounded.flag {
+                velocity.linvel.x = 180.0;
+            }
+            *facing = Facing::Right;
+            sprite.flip_x = true;
+        } else {
+            if player_grounded.flag {
+                velocity.linvel.x = 0.0;
+            }
+        }
+
+        
         // 
     }
 }
