@@ -254,7 +254,7 @@ pub fn player_run(
             }
         }
 
-        if keyboard_input.pressed(KeyCode::Down) {
+        if keyboard_input.pressed(KeyCode::Down) && player_grounded.flag{
             if keyboard_input.pressed(KeyCode::AltLeft) && player_grounded.flag {
                 // transform.translation.y -= 50.0;
                 //下跳
@@ -271,7 +271,7 @@ pub fn player_run(
             if player_grounded.flag {
                 velocity.linvel.y = 500.0;
             }
-        }else {
+        }else if player_grounded.flag{
             *player_state=PlayerState::Standing;
         }
         // 
