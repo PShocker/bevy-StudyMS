@@ -17,6 +17,7 @@ pub struct PlayerAssets {
     pub walk: Vec<Handle<Image>>,
     pub stand: Vec<Handle<Image>>,
     pub jump: Vec<Handle<Image>>,
+    pub prone: Vec<Handle<Image>>,
 }
 
 // 脸朝向
@@ -34,6 +35,7 @@ pub enum PlayerState {
     Standing,
     Walking,
     Jumping,
+    Prone,
 }
 
 // 角色是否在地面上
@@ -50,6 +52,7 @@ pub struct PlayerStateAnimate {
     pub walk: AnimationBundle,
     pub stand: AnimationBundle,
     pub jump: AnimationBundle,
+    pub prone: AnimationBundle,
 }
 
 #[derive(Clone, Default, Bundle)]
@@ -107,6 +110,18 @@ pub fn player(
         };
         texture_atlas_builder.add_texture(handle.clone(), texture);
     }
+
+    for handle in &assets.prone {
+        let Some(texture) = textures.get(&handle) else {
+            warn!(
+                "{:?} did not resolve to an `Image` asset.",
+                asset_server.get_handle_path(handle)
+            );
+            continue;
+        };
+        texture_atlas_builder.add_texture(handle.clone(), texture);
+    }
+
     let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
 
     let mut stand_indices = Vec::new();
@@ -138,12 +153,25 @@ pub fn player(
         jump_indices.push(texture_atlas.get_texture_index(handle).unwrap())
     }
     let jump = AnimationBundle {
-        timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+        timer: AnimationTimer(Timer::from_seconds(0.0, TimerMode::Repeating)),
         indices: AnimationIndices {
             index: 0,
             sprite_indices: jump_indices,
         },
     };
+
+    let mut prone_indices = Vec::new();
+    for handle in &assets.prone {
+        prone_indices.push(texture_atlas.get_texture_index(handle).unwrap())
+    }
+    let prone = AnimationBundle {
+        timer: AnimationTimer(Timer::from_seconds(0.0, TimerMode::Repeating)),
+        indices: AnimationIndices {
+            index: 0,
+            sprite_indices: prone_indices,
+        },
+    };
+
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.spawn((
@@ -177,6 +205,7 @@ pub fn player(
         stand: stand,
         walk: walk,
         jump: jump,
+        prone:prone,
     });
 }
 
@@ -234,12 +263,16 @@ pub fn player_run(
                     commands.entity(player_grounded.enity.unwrap()).remove::<Collider>();
                 }
                 
+            }else if player_grounded.flag{
+                *player_state=PlayerState::Prone;
+                return;
             }
         } else if keyboard_input.pressed(KeyCode::AltLeft) {
             if player_grounded.flag {
                 velocity.linvel.y = 500.0;
             }
         }
+        *player_state=PlayerState::Standing;
     }
 }
 
@@ -275,6 +308,10 @@ pub fn player_grounded_detect(
 }
 
 pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let mut prone: Vec<Handle<Image>> = Vec::new();
+    prone.push(asset_server.load("prone0.png"));
+
+
     let mut walk: Vec<Handle<Image>> = Vec::new();
     walk.push(asset_server.load("walk0.png"));
     walk.push(asset_server.load("walk1.png"));
@@ -289,9 +326,11 @@ pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer
     let mut jump: Vec<Handle<Image>> = Vec::new();
     jump.push(asset_server.load("jump0.png"));
 
+
     commands.insert_resource(PlayerAssets {
         stand: stand,
         walk: walk,
         jump: jump,
+        prone:prone,
     });
 }

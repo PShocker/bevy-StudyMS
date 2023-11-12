@@ -28,7 +28,7 @@ pub fn player_state_machine(
     }
 
     // Standing状态
-    if player_grounded.flag && velocity.linvel.x.abs() < 0.1 {
+    if player_grounded.flag && velocity.linvel.x.abs() < 0.1 && *player_state!=PlayerState::Prone{
         *player_state = PlayerState::Standing;
         return;
     }
@@ -37,7 +37,6 @@ pub fn player_state_machine(
         *player_state = PlayerState::Walking;
         return;
     }
-    
 }
 
 pub fn player_sprite_machine(
@@ -62,27 +61,33 @@ pub fn player_sprite_machine(
         match *player_state {
             PlayerState::Standing => {
                 if *state != PlayerState::Standing {
-                    *state=PlayerState::Standing;
+                    *state = PlayerState::Standing;
                     *indices = player_ani.stand.indices.clone();
-                    *timer=player_ani.stand.timer.clone();
+                    *timer = player_ani.stand.timer.clone();
                     state_change_ev.send_default();
                 }
             }
             PlayerState::Walking => {
-                if  *state != PlayerState::Walking{
-                    *state=PlayerState::Walking;
+                if *state != PlayerState::Walking {
+                    *state = PlayerState::Walking;
                     *indices = player_ani.walk.indices.clone();
-                    *timer=player_ani.walk.timer.clone();
+                    *timer = player_ani.walk.timer.clone();
                     state_change_ev.send_default();
                 }
             }
             PlayerState::Jumping => {
-                if  *state != PlayerState::Jumping{
-                    *state=PlayerState::Jumping;
+                if *state != PlayerState::Jumping {
+                    *state = PlayerState::Jumping;
                     *indices = player_ani.jump.indices.clone();
-                    *timer=player_ani.jump.timer.clone();
+                    *timer = player_ani.jump.timer.clone();
                     state_change_ev.send_default();
                 }
+            }
+            PlayerState::Prone => {
+                *state = PlayerState::Prone;
+                *indices = player_ani.prone.indices.clone();
+                *timer = player_ani.prone.timer.clone();
+                state_change_ev.send_default();
             }
         }
     }
