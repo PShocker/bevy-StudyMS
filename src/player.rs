@@ -1,8 +1,11 @@
 use crate::{
     animate::{AnimationBundle, AnimationIndices, AnimationTimer},
-    state_machine::*, AppState,
+    state_machine::*,
+    AppState,
 };
-use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow, transform::commands};
+use bevy::{
+    prelude::*, render::render_phase::PhaseItem, transform::commands, window::PrimaryWindow,
+};
 use bevy_rapier2d::prelude::*;
 
 // 人物状态切换
@@ -41,11 +44,10 @@ pub enum PlayerState {
 // 角色是否在地面上
 #[derive(Debug, Default, Resource, Reflect)]
 #[reflect(Resource)]
-pub struct PlayerGrounded{
-    pub flag:bool,
-    pub enity:Option<Entity>,
+pub struct PlayerGrounded {
+    pub flag: bool,
+    pub enity: Option<Entity>,
 }
-
 
 #[derive(Debug, Resource)]
 pub struct PlayerStateAnimate {
@@ -77,7 +79,6 @@ pub fn player(
     mut textures: ResMut<Assets<Image>>,
     assets: Res<PlayerAssets>,
     mut next_state: ResMut<NextState<AppState>>,
-
 ) {
     let mut texture_atlas_builder = TextureAtlasBuilder::default();
     for handle in &assets.stand {
@@ -179,7 +180,7 @@ pub fn player(
     commands.spawn((
         PlayerBundle {
             sprite_bundle: SpriteSheetBundle {
-                sprite: TextureAtlasSprite{
+                sprite: TextureAtlasSprite {
                     index: 0,
                     anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.4)),
                     ..default()
@@ -207,10 +208,9 @@ pub fn player(
         stand: stand,
         walk: walk,
         jump: jump,
-        prone:prone,
+        prone: prone,
     });
     next_state.set(AppState::PlayerFinished);
-
 }
 
 // 角色奔跑
@@ -225,6 +225,7 @@ pub fn player_run(
             &mut AnimationIndices,
             &mut AnimationTimer,
             &mut Transform,
+            &mut PlayerState,
         ),
         With<Player>,
     >,
@@ -237,24 +238,31 @@ pub fn player_run(
         return;
     }
 
-    for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform) in
+    for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform, mut state) in
         &mut q_player
     {
-
-        if keyboard_input.pressed(KeyCode::Down) && player_grounded.flag{
+        if keyboard_input.pressed(KeyCode::Down) && player_grounded.flag {
             if keyboard_input.pressed(KeyCode::AltLeft) && player_grounded.flag {
                 // transform.translation.y -= 50.0;
                 //下跳
-                if !commands.get_entity(player_grounded.enity.unwrap()).is_none() {
+                if !commands
+                    .get_entity(player_grounded.enity.unwrap())
+                    .is_none()
+                {
                     // commands.entity(player_grounded.enity.unwrap()).despawn();
-                    commands.entity(player_grounded.enity.unwrap()).remove::<Collider>();
+                    commands
+                        .entity(player_grounded.enity.unwrap())
+                        .remove::<Collider>();
                 }
-                
-            }else if player_grounded.flag{
-                *player_state=PlayerState::Prone;
+            } else if player_grounded.flag
+                && !(keyboard_input.pressed(KeyCode::Left)
+                    || keyboard_input.pressed(KeyCode::Right))
+            {
+                *player_state = PlayerState::Prone;
                 *indices = player_ani.prone.indices.clone();
                 *timer = player_ani.prone.timer.clone();
                 state_change_ev.send_default();
+                *state=PlayerState::Prone;
                 return;
             }
         } else if keyboard_input.pressed(KeyCode::AltLeft) {
@@ -281,8 +289,7 @@ pub fn player_run(
             }
         }
 
-        
-        // 
+        //
     }
 }
 
@@ -305,7 +312,7 @@ pub fn player_grounded_detect(
     // for contact_force_event in contact_force_events.iter() {
     //     println!("Received contact force event: {contact_force_event:?}");
     // }
-    let event=contact_force_events.iter().next();
+    let event = contact_force_events.iter().next();
     if event.is_some() {
         player_grounded.flag = true;
         // event.unwrap().collider
@@ -321,7 +328,6 @@ pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer
     let mut prone: Vec<Handle<Image>> = Vec::new();
     prone.push(asset_server.load("prone0.png"));
 
-
     let mut walk: Vec<Handle<Image>> = Vec::new();
     walk.push(asset_server.load("walk0.png"));
     walk.push(asset_server.load("walk1.png"));
@@ -336,11 +342,10 @@ pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer
     let mut jump: Vec<Handle<Image>> = Vec::new();
     jump.push(asset_server.load("jump0.png"));
 
-
     commands.insert_resource(PlayerAssets {
         stand: stand,
         walk: walk,
         jump: jump,
-        prone:prone,
+        prone: prone,
     });
 }
