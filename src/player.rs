@@ -149,7 +149,11 @@ pub fn player(
     commands.spawn((
         PlayerBundle {
             sprite_bundle: SpriteSheetBundle {
-                sprite: TextureAtlasSprite::new(0),
+                sprite: TextureAtlasSprite{
+                    index: 0,
+                    anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.4)),
+                    ..default()
+                },
                 texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
@@ -157,8 +161,8 @@ pub fn player(
             animation_bundle: stand.clone(),
             rigid_body: RigidBody::Dynamic,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
-            // Collider::cuboid(13.0, 32.0),
-            collider: Collider::round_cuboid(7.0, 24.0, 0.09),
+            // collider:Collider::ball(8.0),
+            collider: Collider::round_cuboid(0.8, 0.8, 0.11),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
             gravity_scale: GravityScale(16.0),
@@ -199,6 +203,7 @@ pub fn player_run(
     if q_player.is_empty() {
         return;
     }
+
     for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform) in
         &mut q_player
     {
@@ -225,7 +230,8 @@ pub fn player_run(
                 // transform.translation.y -= 50.0;
                 //下跳
                 if !commands.get_entity(player_grounded.enity.unwrap()).is_none() {
-                    commands.entity(player_grounded.enity.unwrap()).despawn();
+                    // commands.entity(player_grounded.enity.unwrap()).despawn();
+                    commands.entity(player_grounded.enity.unwrap()).remove::<Collider>();
                 }
                 
             }
