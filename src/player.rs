@@ -195,7 +195,7 @@ pub fn player(
             collider: Collider::round_cuboid(0.8, 0.8, 0.11),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
-            gravity_scale: GravityScale(16.0),
+            gravity_scale: GravityScale(10.0),
             player: Player,
             facing: Facing::Right,
             state: PlayerState::Standing,

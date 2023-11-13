@@ -26,7 +26,7 @@ pub fn player_state_machine(
         println!("{:?}",velocity.linvel.y);
         if *group == CustomFilterTag::GroupB && velocity.linvel.y < -150.0 {
             *group = CustomFilterTag::GroupA;
-        } else if velocity.linvel.y >= 10.0 {
+        } else if velocity.linvel.y >= 500.0 {
             *group = CustomFilterTag::GroupB;
         }
         // Jumping状态
