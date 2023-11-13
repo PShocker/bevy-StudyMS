@@ -197,7 +197,7 @@ pub fn player(
             // collider: Collider::capsule_x(2.0,1.0),
             // collider: Collider::cuboid(8.0, 2.0),
             velocity: Velocity::zero(),
-            restitution: Restitution::new(0.0),
+            restitution: Restitution::new(-100.0),
             gravity_scale: GravityScale(10.0),
             player: Player,
             facing: Facing::Right,

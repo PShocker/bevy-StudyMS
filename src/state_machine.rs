@@ -23,12 +23,12 @@ pub fn player_state_machine(
 
     for (mut velocity, mut group) in &mut q_player {
         //下落最大速度
-        // println!("{:?}", velocity.linvel.y);
+        println!("{:?}", velocity.linvel.y);
         if velocity.linvel.y <= -200.0 {
             velocity.linvel.y = -200.0;
         }
         // // //判断下跳
-        if velocity.linvel.y <= -10.0 {
+        if velocity.linvel.y <= -40.0 {
             //下落
             *group = CustomFilterTag::GroupA;
         }  
