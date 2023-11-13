@@ -27,12 +27,20 @@ pub fn player_state_machine(
         if velocity.linvel.y <= -200.0 {
             velocity.linvel.y = -200.0;
         }
-        //判断下跳
-        if *group == CustomFilterTag::GroupB && velocity.linvel.y <= -150.0 {
+        // // //判断下跳
+        if velocity.linvel.y <= -10.0 {
+            //下落
             *group = CustomFilterTag::GroupA;
-        } else if velocity.linvel.y >= 500.0 {
+        }  
+        if velocity.linvel.y >= 10.0 {
             *group = CustomFilterTag::GroupB;
         }
+        // if velocity.linvel.y >= 10.0 {
+        //     *group = CustomFilterTag::GroupB;
+        // }
+        // if velocity.linvel.y >= 10.0 {
+        //     *group = CustomFilterTag::GroupB;
+        // }
 
         // Jumping状态
         if !player_grounded.flag {

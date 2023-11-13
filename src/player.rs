@@ -192,7 +192,10 @@ pub fn player(
             rigid_body: RigidBody::Dynamic,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
             // collider:Collider::ball(8.0),
-            collider: Collider::round_cuboid(0.8, 0.8, 0.11),
+            collider: Collider::round_cuboid(0.8, 0.8, 0.1),
+            // collider: Collider::capsule(Vec2::new(0.0, 0.0), Vec2::new(0.0, 0.0),100.0),
+            // collider: Collider::capsule_x(2.0,1.0),
+            // collider: Collider::cuboid(8.0, 2.0),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
             gravity_scale: GravityScale(10.0),
@@ -258,19 +261,19 @@ pub fn player_run(
             }
         } else if keyboard_input.pressed(KeyCode::AltLeft) {
             if player_grounded.flag {
-                velocity.linvel.y = 500.0;
+                velocity.linvel.y = 600.0;
             }
         }
 
         if keyboard_input.pressed(KeyCode::Left) {
             if player_grounded.flag {
-                velocity.linvel.x = -180.0;
+                velocity.linvel.x = -220.0;
             }
             *facing = Facing::Left;
             sprite.flip_x = false;
         } else if keyboard_input.pressed(KeyCode::Right) {
             if player_grounded.flag {
-                velocity.linvel.x = 180.0;
+                velocity.linvel.x = 220.0;
             }
             *facing = Facing::Right;
             sprite.flip_x = true;

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
 use customfilter::{CustomFilterTag, SameUserDataFilter};
-use foothold::FootHold;
+use foothold::{FootHold, get_foothold_group};
 use player::{
     player, player_grounded_detect, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
     PlayerState, StateChangeEvent,
@@ -64,7 +64,7 @@ fn main() {
             DefaultPlugins.set(WindowPlugin {
                 //设置窗口大小 1100*750
                 primary_window: Some(Window {
-                    title:"StudyMS".to_owned(),
+                    title: "StudyMS".to_owned(),
                     ..default()
                 }),
                 ..default()
@@ -261,10 +261,10 @@ fn setup(
     //解析地图FootHold
     /*
     线段绘制方向决定了单边碰撞的方向
-    水平线段如果是从左往右画，那么从上往下移动会发生碰撞，从下往上移动不会发生碰撞
-    水平线段如果是从右往左画，那么从下往上移动会发生碰撞，从上往下移动不会发生碰撞
-    垂直线段如果是从上往下画，那么从右往左移动会发生碰撞，从左往右移动不会发生碰撞
-    垂直线段如果是从下往上画，那么从左往右移动会发生碰撞，从右往左移动不会发生碰撞
+    水平线段如果是从左往右画，那么从上往下移动会发生碰撞，从下往上移动不会发生碰撞--GruopA
+    水平线段如果是从右往左画，那么从下往上移动会发生碰撞，从上往下移动不会发生碰撞--GruopB
+    垂直线段如果是从上往下画，那么从右往左移动会发生碰撞，从左往右移动不会发生碰撞--GruopC
+    垂直线段如果是从下往上画，那么从左往右移动会发生碰撞，从右往左移动不会发生碰撞--GruopD
     所有斜线只有从上往下会发生碰撞
 
     当某条垂直线段往下延伸的其他线段都是垂直线段，且没有出现拐弯就突然中断时，那么这条线段是无效的墙，永远不会发生碰撞
@@ -305,7 +305,11 @@ fn setup(
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
                 Friction::coefficient(1.0),
-                CustomFilterTag::GroupA,
+                get_foothold_group(
+                    Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
+                    Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+                ),
+                // CustomFilterTag::GroupA,
                 ActiveHooks::FILTER_CONTACT_PAIRS,
             )); //摩擦力
         }

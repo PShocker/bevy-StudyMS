@@ -3,8 +3,10 @@ use bevy_rapier2d::prelude::*;
 
 #[derive(PartialEq, Eq, Clone, Copy, Component)]
 pub enum CustomFilterTag {
-    GroupA,
-    GroupB,
+    GroupA=1,
+    GroupB=2,
+    GroupC=4,
+    GroupD=8,
 }
 
 // A custom filter that allows contacts only between rigid-bodies with the
@@ -16,15 +18,16 @@ pub struct SameUserDataFilter<'w, 's> {
     tags: Query<'w, 's, &'static CustomFilterTag>,
 }
 
-static mut ENITY: Option<Entity> = None;
-
 impl BevyPhysicsHooks for SameUserDataFilter<'_, '_> {
     fn filter_contact_pair(&self, context: PairFilterContextView) -> Option<SolverFlags> {
+        // println!("{:?}", self.tags);
         if self.tags.get(context.collider1()).ok().copied()
             == self.tags.get(context.collider2()).ok().copied()
         {
+            // println!("{:?}", self.tags);
             return Some(SolverFlags::COMPUTE_IMPULSES);
         } else {
+            // println!("{:?}", self.tags);
             return None;
         }
     }
