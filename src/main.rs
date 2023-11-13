@@ -61,7 +61,14 @@ fn check_textures(
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins,
+            DefaultPlugins.set(WindowPlugin {
+                //设置窗口大小 1100*750
+                primary_window: Some(Window {
+                    title:"StudyMS".to_owned(),
+                    ..default()
+                }),
+                ..default()
+            }),
             RapierPhysicsPlugin::<SameUserDataFilter>::pixels_per_meter(100.0),
             RapierDebugRenderPlugin::default(), //显示碰撞线
         ))

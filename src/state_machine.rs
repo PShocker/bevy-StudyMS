@@ -13,7 +13,7 @@ use crate::{
 
 pub fn player_state_machine(
     keyboard_input: Res<Input<KeyCode>>,
-    mut q_player: Query<(&Velocity, &mut CustomFilterTag), With<Player>>,
+    mut q_player: Query<(&mut Velocity, &mut CustomFilterTag), With<Player>>,
     mut player_state: ResMut<PlayerState>,
     player_grounded: Res<PlayerGrounded>,
 ) {
@@ -22,13 +22,18 @@ pub fn player_state_machine(
     }
 
     for (mut velocity, mut group) in &mut q_player {
-        //
-        println!("{:?}",velocity.linvel.y);
-        if *group == CustomFilterTag::GroupB && velocity.linvel.y < -150.0 {
+        //下落最大速度
+        // println!("{:?}", velocity.linvel.y);
+        if velocity.linvel.y <= -200.0 {
+            velocity.linvel.y = -200.0;
+        }
+        //判断下跳
+        if *group == CustomFilterTag::GroupB && velocity.linvel.y <= -150.0 {
             *group = CustomFilterTag::GroupA;
         } else if velocity.linvel.y >= 500.0 {
             *group = CustomFilterTag::GroupB;
         }
+
         // Jumping状态
         if !player_grounded.flag {
             *player_state = PlayerState::Jumping;
