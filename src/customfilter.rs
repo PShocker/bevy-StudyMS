@@ -25,14 +25,7 @@ impl BevyPhysicsHooks for SameUserDataFilter<'_, '_> {
         {
             return Some(SolverFlags::COMPUTE_IMPULSES);
         } else {
-            if unsafe { ENITY } == None {
-                unsafe { ENITY = Some(context.collider1()) };
-                return None;
-            } else if unsafe { ENITY.unwrap() } != context.collider1() {
-                return Some(SolverFlags::COMPUTE_IMPULSES);
-            } else {
-                return None;
-            }
+            return None;
         }
     }
 }

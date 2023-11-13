@@ -7,36 +7,47 @@ use bevy_rapier2d::prelude::Velocity;
 
 use crate::{
     animate::{AnimationIndices, AnimationTimer},
+    customfilter::CustomFilterTag,
     player::{Facing, Player, PlayerGrounded, PlayerState, PlayerStateAnimate, StateChangeEvent},
 };
 
 pub fn player_state_machine(
     keyboard_input: Res<Input<KeyCode>>,
-    q_player: Query<&Velocity, With<Player>>,
+    mut q_player: Query<(&Velocity, &mut CustomFilterTag), With<Player>>,
     mut player_state: ResMut<PlayerState>,
     player_grounded: Res<PlayerGrounded>,
 ) {
     if q_player.is_empty() {
         return;
     }
-    let velocity = q_player.single();
 
-    // Jumping状态
-    if !player_grounded.flag {
-        *player_state = PlayerState::Jumping;
-        return;
-    }
+    for (mut velocity, mut group) in &mut q_player {
+        //
+        println!("{:?}",velocity.linvel.y);
+        if *group == CustomFilterTag::GroupB && velocity.linvel.y < -150.0 {
+            *group = CustomFilterTag::GroupA;
+        } else if velocity.linvel.y >= 10.0 {
+            *group = CustomFilterTag::GroupB;
+        }
+        // Jumping状态
+        if !player_grounded.flag {
+            *player_state = PlayerState::Jumping;
+            return;
+        }
 
-    // Standing状态
-    if player_grounded.flag && velocity.linvel.x.abs() < 0.1 && *player_state != PlayerState::Prone
-    {
-        *player_state = PlayerState::Standing;
-        return;
-    }
-    // Running状态
-    if player_grounded.flag && velocity.linvel.x.abs() > 1.0 {
-        *player_state = PlayerState::Walking;
-        return;
+        // Standing状态
+        if player_grounded.flag
+            && velocity.linvel.x.abs() < 0.1
+            && *player_state != PlayerState::Prone
+        {
+            *player_state = PlayerState::Standing;
+            return;
+        }
+        // Running状态
+        if player_grounded.flag && velocity.linvel.x.abs() > 1.0 {
+            *player_state = PlayerState::Walking;
+            return;
+        }
     }
 }
 
