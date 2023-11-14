@@ -4,9 +4,7 @@ use crate::{
     state_machine::*,
     AppState,
 };
-use bevy::{
-    prelude::*, render::render_phase::PhaseItem, transform::commands, window::PrimaryWindow, ecs::query,
-};
+use bevy::{prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;
 
 // 人物状态切换
@@ -18,10 +16,11 @@ pub struct Player;
 
 #[derive(Debug, Resource)]
 pub struct PlayerAssets {
-    pub walk: Vec<Handle<Image>>,
-    pub stand: Vec<Handle<Image>>,
-    pub jump: Vec<Handle<Image>>,
-    pub prone: Vec<Handle<Image>>,
+    pub map:HashMap<String,Vec<Handle<Image>>>,
+    // pub walk: Vec<Handle<Image>>,
+    // pub stand: Vec<Handle<Image>>,
+    // pub jump: Vec<Handle<Image>>,
+    // pub prone: Vec<Handle<Image>>,
 }
 
 // 脸朝向
@@ -73,6 +72,15 @@ pub struct PlayerBundle {
     pub controller: KinematicCharacterController,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, States)]
+enum LoadState {
+    #[default]
+    Setup,
+    AssetsLoaded,
+    PlayerFinished,
+}
+
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -97,20 +105,15 @@ fn check_textures(
     mut next_state: ResMut<NextState<AppState>>,
     assets: ResMut<PlayerAssets>,
     image: ResMut<Assets<Image>>,
+    asset_server: Res<AssetServer>,
 ) {
     // Advance the `AppState` once all sprite handles have been loaded by the `AssetServer`
-    for handle in &assets.stand {
-        let Some(texture) = image.get(&handle) else {
-            continue;
-        };
-        // next_state.set(AppState::Finished);
+    for map in assets.map {
+        println!("{:?}", asset_server.get_group_load_state(map.1.iter().map(|h| h.id())));
     }
-    for handle in &assets.walk {
-        let Some(texture) = image.get(&handle) else {
-            continue;
-        };
-        next_state.set(AppState::TextFinished);
-    }
+        // asset_server.get_group_load_state(assets.walk.iter().map(|h| h.id()));
+
+        // next_state.set(AppState::TextFinished);
 }
 
 pub fn player(
@@ -122,50 +125,18 @@ pub fn player(
     mut next_state: ResMut<NextState<AppState>>,
 ) {
     let mut texture_atlas_builder = TextureAtlasBuilder::default();
-    for handle in &assets.stand {
-        let Some(texture) = textures.get(&handle) else {
-            warn!(
-                "{:?} did not resolve to an `Image` asset.",
-                asset_server.get_handle_path(handle)
-            );
-            continue;
-        };
-        texture_atlas_builder.add_texture(handle.clone(), texture);
+    for map in assets.map{
+        for vecs in map.1{
+            let Some(texture) = textures.get(&vecs) else {
+                warn!(
+                    "{:?} did not resolve to an `Image` asset.",
+                    asset_server.get_handle_path(vecs)
+                );
+                continue;
+            };
+            texture_atlas_builder.add_texture(vecs.clone(), texture);
+        } 
     }
-
-    for handle in &assets.walk {
-        let Some(texture) = textures.get(&handle) else {
-            warn!(
-                "{:?} did not resolve to an `Image` asset.",
-                asset_server.get_handle_path(handle)
-            );
-            continue;
-        };
-        texture_atlas_builder.add_texture(handle.clone(), texture);
-    }
-
-    for handle in &assets.jump {
-        let Some(texture) = textures.get(&handle) else {
-            warn!(
-                "{:?} did not resolve to an `Image` asset.",
-                asset_server.get_handle_path(handle)
-            );
-            continue;
-        };
-        texture_atlas_builder.add_texture(handle.clone(), texture);
-    }
-
-    for handle in &assets.prone {
-        let Some(texture) = textures.get(&handle) else {
-            warn!(
-                "{:?} did not resolve to an `Image` asset.",
-                asset_server.get_handle_path(handle)
-            );
-            continue;
-        };
-        texture_atlas_builder.add_texture(handle.clone(), texture);
-    }
-
     let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
 
     let mut stand_indices = Vec::new();
@@ -303,10 +274,13 @@ pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer
     let mut jump: Vec<Handle<Image>> = Vec::new();
     jump.push(asset_server.load("jump0.png"));
 
+    let mut map = HashMap::new();
+    map.insert("prone", prone);
+    map.insert("walk", walk);
+    map.insert("stand", stand);
+    map.insert("jump", jump);
+
     commands.insert_resource(PlayerAssets {
-        stand: stand,
-        walk: walk,
-        jump: jump,
-        prone: prone,
+        map: map
     });
 }
