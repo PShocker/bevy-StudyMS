@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::time::Time;
 
-use crate::player::{Player, PlayerState, PlayerStateAnimate, StateChangeEvent};
+use crate::player::{Player, PlayerState, StateChangeEvent};
 
 #[derive(Component, Clone, Default, Debug)]
 pub struct AnimationTimer(pub Timer);
@@ -42,14 +42,14 @@ pub fn animate_player(
         With<Player>,
     >,
     time: Res<Time>,
-    mut state_change_ev: EventReader<StateChangeEvent>,
+    // mut state_change_ev: EventReader<StateChangeEvent>,
     mut player_state: ResMut<PlayerState>,
 ) {
     for (entity, mut timer, mut indices, mut sprite) in &mut q_player {
         if *player_state == PlayerState::Prone {
             sprite.anchor = bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.20));
         } else {
-            sprite.anchor = bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.40));
+            sprite.anchor = bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.50));
         }
         timer.0.tick(time.delta());
         if timer.0.just_finished() {
@@ -60,15 +60,16 @@ pub fn animate_player(
                 indices.index += 1;
                 indices.sprite_indices[indices.index]
             };
-        } else if state_change_ev.iter().next().is_some() {
-            sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
-                indices.index = 0;
-                indices.sprite_indices[indices.index]
-            } else {
-                indices.index += 1;
-                indices.sprite_indices[indices.index]
-            };
-        }
+        } 
+        // else if state_change_ev.iter().next().is_some() {
+        //     sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
+        //         indices.index = 0;
+        //         indices.sprite_indices[indices.index]
+        //     } else {
+        //         indices.index += 1;
+        //         indices.sprite_indices[indices.index]
+        //     };
+        // }
     }
 }
 

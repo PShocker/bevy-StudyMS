@@ -4,7 +4,7 @@ use crate::{
     state_machine::*,
     AppState,
 };
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;
 
 // 人物状态切换
@@ -16,11 +16,12 @@ pub struct Player;
 
 #[derive(Debug, Resource)]
 pub struct PlayerAssets {
-    pub map:HashMap<String,Vec<Handle<Image>>>,
-    // pub walk: Vec<Handle<Image>>,
-    // pub stand: Vec<Handle<Image>>,
-    // pub jump: Vec<Handle<Image>>,
-    // pub prone: Vec<Handle<Image>>,
+    pub handle_map: HashMap<String, Vec<Handle<Image>>>,
+}
+
+#[derive(Debug, Resource)]
+pub struct AnimateAssets {
+    pub animate_map: HashMap<String, AnimationBundle>,
 }
 
 // 脸朝向
@@ -48,14 +49,6 @@ pub struct PlayerGrounded {
     pub flag: bool,
 }
 
-#[derive(Debug, Resource)]
-pub struct PlayerStateAnimate {
-    pub walk: AnimationBundle,
-    pub stand: AnimationBundle,
-    pub jump: AnimationBundle,
-    pub prone: AnimationBundle,
-}
-
 #[derive(Clone, Default, Bundle)]
 pub struct PlayerBundle {
     pub player: Player,
@@ -73,28 +66,26 @@ pub struct PlayerBundle {
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, States)]
-enum LoadState {
+enum Load {
     #[default]
     Setup,
+    Loading,
     AssetsLoaded,
     PlayerFinished,
 }
-
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::TextFinished), player) //生成人物
+        app.add_state::<Load>()
+            .add_systems(OnEnter(Load::AssetsLoaded), player) //生成人物
             .add_systems(
                 Update,
-                check_textures.run_if(in_state(AppState::SetupFinished)),//等待人物读取完成
+                check_textures.run_if(in_state(Load::Loading)), //等待人物读取完成
             )
-            .add_systems(OnEnter(AppState::Setup), setup_player_assets)
-            .add_systems(
-                Update,
-                player_run.run_if(in_state(AppState::PlayerFinished)),
-            ) //先读取人物动画,否则会导致读取失败
+            .add_systems(OnEnter(Load::Setup), setup_player_assets)
+            .add_systems(Update, player_run.run_if(in_state(Load::PlayerFinished))) //先读取人物动画,否则会导致读取失败
             .insert_resource(PlayerState::Standing)
             .insert_resource(PlayerGrounded { flag: false });
     }
@@ -102,31 +93,30 @@ impl Plugin for PlayerPlugin {
 
 //等待人物动作加载完成
 fn check_textures(
-    mut next_state: ResMut<NextState<AppState>>,
+    mut next_state: ResMut<NextState<Load>>,
     assets: ResMut<PlayerAssets>,
     image: ResMut<Assets<Image>>,
     asset_server: Res<AssetServer>,
 ) {
     // Advance the `AppState` once all sprite handles have been loaded by the `AssetServer`
-    for map in assets.map {
-        println!("{:?}", asset_server.get_group_load_state(map.1.iter().map(|h| h.id())));
+    for map in &assets.handle_map {
+        if LoadState::Loaded == asset_server.get_group_load_state(map.1.iter().map(|h| h.id())) {
+            next_state.set(Load::AssetsLoaded);
+        }
     }
-        // asset_server.get_group_load_state(assets.walk.iter().map(|h| h.id()));
-
-        // next_state.set(AppState::TextFinished);
 }
 
-pub fn player(
+fn player(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Image>>,
-    assets: Res<PlayerAssets>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut assets: ResMut<PlayerAssets>,
+    mut next_state: ResMut<NextState<Load>>,
 ) {
     let mut texture_atlas_builder = TextureAtlasBuilder::default();
-    for map in assets.map{
-        for vecs in map.1{
+    for map in &assets.handle_map {
+        for vecs in map.1 {
             let Some(texture) = textures.get(&vecs) else {
                 warn!(
                     "{:?} did not resolve to an `Image` asset.",
@@ -135,58 +125,26 @@ pub fn player(
                 continue;
             };
             texture_atlas_builder.add_texture(vecs.clone(), texture);
-        } 
+        }
     }
     let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
 
-    let mut stand_indices = Vec::new();
-    for handle in &assets.stand {
-        stand_indices.push(texture_atlas.get_texture_index(handle).unwrap())
-    }
-    let stand = AnimationBundle {
-        timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-        indices: AnimationIndices {
-            index: 0,
-            sprite_indices: stand_indices,
-        },
-    };
+    let mut animate_map = HashMap::new();
 
-    let mut walk_indices = Vec::new();
-    for handle in &assets.walk {
-        walk_indices.push(texture_atlas.get_texture_index(handle).unwrap())
+    for map in &assets.handle_map {
+        let mut indices = Vec::new();
+        for handle in map.1 {
+            indices.push(texture_atlas.get_texture_index(&handle).unwrap())
+        }
+        let animate = AnimationBundle {
+            timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
+            indices: AnimationIndices {
+                index: 0,
+                sprite_indices: indices,
+            },
+        };
+        animate_map.insert(map.0.to_string(), animate);
     }
-    let walk = AnimationBundle {
-        timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
-        indices: AnimationIndices {
-            index: 0,
-            sprite_indices: walk_indices,
-        },
-    };
-
-    let mut jump_indices = Vec::new();
-    for handle in &assets.jump {
-        jump_indices.push(texture_atlas.get_texture_index(handle).unwrap())
-    }
-    let jump = AnimationBundle {
-        timer: AnimationTimer(Timer::from_seconds(0.0, TimerMode::Repeating)),
-        indices: AnimationIndices {
-            index: 0,
-            sprite_indices: jump_indices,
-        },
-    };
-
-    let mut prone_indices = Vec::new();
-    for handle in &assets.prone {
-        prone_indices.push(texture_atlas.get_texture_index(handle).unwrap())
-    }
-    let prone = AnimationBundle {
-        timer: AnimationTimer(Timer::from_seconds(0.0, TimerMode::Repeating)),
-        indices: AnimationIndices {
-            index: 0,
-            sprite_indices: prone_indices,
-        },
-    };
-
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     commands.spawn((
@@ -194,14 +152,14 @@ pub fn player(
             sprite_bundle: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     index: 0,
-                    anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.4)),
+                    anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                // texture_atlas: texture_atlas_handle.clone(),
+                texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
-            animation_bundle: stand.clone(),
+            animation_bundle: animate_map.get("walk").unwrap().clone(),
             rigid_body: RigidBody::KinematicPositionBased,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
             collider: Collider::cuboid(9.0, 4.0),
@@ -211,18 +169,14 @@ pub fn player(
             facing: Direction::Right,
             state: PlayerState::Standing,
             sleep: Sleeping::disabled(),
-            controller:KinematicCharacterController::default()
+            controller: KinematicCharacterController::default(),
         },
         CustomFilterTag::GroupA,
     ));
-
-    commands.insert_resource(PlayerStateAnimate {
-        stand: stand,
-        walk: walk,
-        jump: jump,
-        prone: prone,
+    commands.insert_resource(AnimateAssets {
+        animate_map: animate_map,
     });
-    next_state.set(AppState::PlayerFinished);
+    next_state.set(Load::PlayerFinished);
 }
 
 pub fn player_run(
@@ -255,8 +209,11 @@ pub fn player_run(
     player.translation = Some(translation);
 }
 
-
-pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn setup_player_assets(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut next_state: ResMut<NextState<Load>>,
+) {
     let mut prone: Vec<Handle<Image>> = Vec::new();
     prone.push(asset_server.load("prone0.png"));
 
@@ -274,13 +231,14 @@ pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer
     let mut jump: Vec<Handle<Image>> = Vec::new();
     jump.push(asset_server.load("jump0.png"));
 
-    let mut map = HashMap::new();
-    map.insert("prone", prone);
-    map.insert("walk", walk);
-    map.insert("stand", stand);
-    map.insert("jump", jump);
+    let mut handle_map = HashMap::new();
+    handle_map.insert("prone".to_string(), prone);
+    handle_map.insert("walk".to_string(), walk);
+    handle_map.insert("stand".to_string(), stand);
+    handle_map.insert("jump".to_string(), jump);
 
     commands.insert_resource(PlayerAssets {
-        map: map
+        handle_map: handle_map,
     });
+    next_state.set(Load::Loading);
 }

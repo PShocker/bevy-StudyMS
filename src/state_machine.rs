@@ -8,7 +8,7 @@ use bevy_rapier2d::prelude::Velocity;
 use crate::{
     animate::{AnimationIndices, AnimationTimer},
     customfilter::CustomFilterTag,
-    player::{Direction, Player, PlayerGrounded, PlayerState, PlayerStateAnimate, StateChangeEvent},
+    player::{Direction, Player, PlayerGrounded, PlayerState, StateChangeEvent},
 };
 
 pub fn player_state_machine(
@@ -85,58 +85,3 @@ pub fn player_gravity_machine(
     }
 }
 
-pub fn player_sprite_machine(
-    mut player_state: ResMut<PlayerState>,
-    mut q_player: Query<
-        (
-            &mut TextureAtlasSprite,
-            &mut AnimationIndices,
-            &mut AnimationTimer,
-            &mut PlayerState,
-        ),
-        With<Player>,
-    >,
-    player_ani: Res<PlayerStateAnimate>,
-    mut state_change_ev: EventWriter<StateChangeEvent>,
-    mut player_grounded: ResMut<PlayerGrounded>,
-) {
-    if q_player.is_empty() {
-        return;
-    }
-    for (mut sprite, mut indices, mut timer, mut state) in &mut q_player {
-        match *player_state {
-            PlayerState::Standing => {
-                if *state != PlayerState::Standing {
-                    *state = PlayerState::Standing;
-                    *indices = player_ani.stand.indices.clone();
-                    *timer = player_ani.stand.timer.clone();
-                    state_change_ev.send_default();
-                }
-            }
-            PlayerState::Walking => {
-                if *state != PlayerState::Walking {
-                    *state = PlayerState::Walking;
-                    *indices = player_ani.walk.indices.clone();
-                    *timer = player_ani.walk.timer.clone();
-                    state_change_ev.send_default();
-                }
-            }
-            PlayerState::Jumping => {
-                if *state != PlayerState::Jumping {
-                    *state = PlayerState::Jumping;
-                    *indices = player_ani.jump.indices.clone();
-                    *timer = player_ani.jump.timer.clone();
-                    state_change_ev.send_default();
-                }
-            }
-            PlayerState::Prone => {
-                if *state != PlayerState::Prone {
-                    *state = PlayerState::Prone;
-                    *indices = player_ani.prone.indices.clone();
-                    *timer = player_ani.prone.timer.clone();
-                    state_change_ev.send_default();
-                }
-            }
-        }
-    }
-}

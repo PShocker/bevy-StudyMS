@@ -15,7 +15,7 @@ pub fn camera_follow(
     mut q_camera: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     q_player: Query<&Transform, With<Player>>,
     mut q_window: Query<&Window, With<PrimaryWindow>>,
-    backGroundEdge: Res<BackGroundEdge>,
+    back_ground_edge: Res<BackGroundEdge>,
 ) {
     if q_player.is_empty() {
         return;
@@ -29,13 +29,13 @@ pub fn camera_follow(
         // 视为已达到player位置
         return;
     }
-    if camera_transform.translation.x - window.width() / 2.0 < backGroundEdge.left
-        && player_pos.x - window.width() / 2.0 < backGroundEdge.left
+    if camera_transform.translation.x - window.width() / 2.0 < back_ground_edge.left
+        && player_pos.x - window.width() / 2.0 < back_ground_edge.left
     {
         return;
     }
-    if camera_transform.translation.x + window.width() / 2.0 > backGroundEdge.right
-        && player_pos.x + window.width() / 2.0 > backGroundEdge.right
+    if camera_transform.translation.x + window.width() / 2.0 > back_ground_edge.right
+        && player_pos.x + window.width() / 2.0 > back_ground_edge.right
     {
         return;
     }

@@ -7,11 +7,7 @@ use bevy_rapier2d::prelude::*;
 use camera::*;
 use customfilter::{CustomFilterTag};
 use foothold::{get_foothold_group, FootHold};
-use player::{
-    player, setup_player_assets, PlayerAssets, PlayerGrounded,
-    PlayerState, StateChangeEvent, PlayerPlugin,
-};
-use state_machine::{player_sprite_machine, player_state_machine};
+use player::PlayerPlugin;
 use std::{
     cmp::{max, min},
     fs,
@@ -29,7 +25,7 @@ mod state_machine;
 mod utils;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, States)]
-pub enum AppState {
+enum AppState {
     #[default]
     Setup,
     SetupFinished,
@@ -58,19 +54,13 @@ fn main() {
         .add_systems(Startup, setup) //初始化
          
         // .add_systems(Update, animate_back) //背景动画
-        .add_systems(Update, camera_follow.run_if(in_state(AppState::PlayerFinished))) //镜头跟随
+        .add_systems(Update, camera_follow) //镜头跟随
          //人物行走输入事件和人物方向
         // .add_systems(Update, background) //背景跟随
         .add_systems(
             Update,
-            animate_player.run_if(in_state(AppState::PlayerFinished)),
+            animate_player,
         ) //播放人物动画
-        .add_systems(
-            PostUpdate,
-            (player_state_machine, player_sprite_machine)
-                .run_if(in_state(AppState::PlayerFinished)),
-        )
-        .add_event::<StateChangeEvent>()
         .run();
 }
 
@@ -178,19 +168,19 @@ fn setup(
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                // commands.spawn(SpriteBundle {
-                //     texture: asset_server.load(
-                //         tiles["Resource"]["ResourceUrl"]
-                //             .to_string()
-                //             .replace("\"", ""),
-                //     ),
-                //     transform: Transform::from_xyz(x, y, z),
-                //     sprite: Sprite {
-                //         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                //         ..default()
-                //     },
-                //     ..default()
-                // });
+                commands.spawn(SpriteBundle {
+                    texture: asset_server.load(
+                        tiles["Resource"]["ResourceUrl"]
+                            .to_string()
+                            .replace("\"", ""),
+                    ),
+                    transform: Transform::from_xyz(x, y, z),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                        ..default()
+                    },
+                    ..default()
+                });
             }
         }
     }
@@ -272,7 +262,6 @@ fn setup(
                     Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
-                Friction::coefficient(1.0),
                 get_foothold_group(
                     Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
