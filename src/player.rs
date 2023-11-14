@@ -5,7 +5,7 @@ use crate::{
     AppState,
 };
 use bevy::{
-    prelude::*, render::render_phase::PhaseItem, transform::commands, window::PrimaryWindow,
+    prelude::*, render::render_phase::PhaseItem, transform::commands, window::PrimaryWindow, ecs::query,
 };
 use bevy_rapier2d::prelude::*;
 
@@ -80,9 +80,13 @@ impl Plugin for PlayerPlugin {
         app.add_systems(OnEnter(AppState::TextFinished), player) //生成人物
             .add_systems(
                 Update,
-                check_textures.run_if(in_state(AppState::SetupFinished)),
+                check_textures.run_if(in_state(AppState::SetupFinished)),//等待人物读取完成
             )
-            .add_systems(OnEnter(AppState::Setup), setup_player_assets) //先读取人物动画,否则会导致读取失败
+            .add_systems(OnEnter(AppState::Setup), setup_player_assets)
+            .add_systems(
+                Update,
+                player_run.run_if(in_state(AppState::PlayerFinished)),
+            ) //先读取人物动画,否则会导致读取失败
             .insert_resource(PlayerState::Standing)
             .insert_resource(PlayerGrounded { flag: false });
     }
@@ -236,7 +240,7 @@ pub fn player(
             facing: Direction::Right,
             state: PlayerState::Standing,
             sleep: Sleeping::disabled(),
-            controller: KinematicCharacterController::default(),
+            controller:KinematicCharacterController::default()
         },
         CustomFilterTag::GroupA,
     ));
@@ -253,11 +257,11 @@ pub fn player(
 pub fn player_run(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
-    mut q_con: Query<&mut KinematicCharacterController>,
-    mut q_con_out: Query<&mut KinematicCharacterControllerOutput>,
+    mut q_char: Query<&mut KinematicCharacterController>,
+    mut q_out: Query<&mut KinematicCharacterControllerOutput>,
 ) {
-    let mut player = q_con.single_mut();
-    for (output) in q_con_out.iter() {
+    let mut player = q_char.single_mut();
+    for (output) in q_out.iter() {
         if output.grounded == true {
             println!("touches the ground: {:?}", output.grounded);
         } else {
@@ -275,10 +279,11 @@ pub fn player_run(
         translation.x += time.delta_seconds() * 200.0 * -1.0;
     }
 
-    translation.y += time.delta_seconds() * 10.0 * -1.0;
+    translation.y += time.delta_seconds() * 200.0 * -1.0;
 
     player.translation = Some(translation);
 }
+
 
 pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     let mut prone: Vec<Handle<Image>> = Vec::new();

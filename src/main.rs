@@ -8,10 +8,10 @@ use camera::*;
 use customfilter::{CustomFilterTag};
 use foothold::{get_foothold_group, FootHold};
 use player::{
-    player, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
+    player, setup_player_assets, PlayerAssets, PlayerGrounded,
     PlayerState, StateChangeEvent, PlayerPlugin,
 };
-use state_machine::{player_gravity_machine, player_sprite_machine, player_state_machine};
+use state_machine::{player_sprite_machine, player_state_machine};
 use std::{
     cmp::{max, min},
     fs,
@@ -56,15 +56,10 @@ fn main() {
         .add_state::<AppState>()
         .add_plugins(PlayerPlugin)
         .add_systems(Startup, setup) //初始化
-        
-         //等待人物读取完成
-        .add_systems(OnEnter(AppState::TextFinished), player) //生成人物
+         
         // .add_systems(Update, animate_back) //背景动画
         .add_systems(Update, camera_follow.run_if(in_state(AppState::PlayerFinished))) //镜头跟随
-        .add_systems(
-            Update,
-            player_run.run_if(in_state(AppState::PlayerFinished)),
-        ) //人物行走输入事件和人物方向
+         //人物行走输入事件和人物方向
         // .add_systems(Update, background) //背景跟随
         .add_systems(
             Update,
@@ -74,10 +69,6 @@ fn main() {
             PostUpdate,
             (player_state_machine, player_sprite_machine)
                 .run_if(in_state(AppState::PlayerFinished)),
-        )
-        .add_systems(
-            Update,
-            (player_gravity_machine).run_if(in_state(AppState::PlayerFinished)),
         )
         .add_event::<StateChangeEvent>()
         .run();
