@@ -5,13 +5,13 @@ use background::{background, BackGround, BackGroundEdge};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
-use customfilter::{CustomFilterTag, SameUserDataFilter};
-use foothold::{FootHold, get_foothold_group};
+use customfilter::{CustomFilterTag};
+use foothold::{get_foothold_group, FootHold};
 use player::{
-    player, player_grounded_detect, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
-    PlayerState, StateChangeEvent,
+    player, player_run, setup_player_assets, PlayerAssets, PlayerGrounded,
+    PlayerState, StateChangeEvent, PlayerPlugin,
 };
-use state_machine::{player_sprite_machine, player_state_machine};
+use state_machine::{player_gravity_machine, player_sprite_machine, player_state_machine};
 use std::{
     cmp::{max, min},
     fs,
@@ -37,26 +37,7 @@ pub enum AppState {
     PlayerFinished,
 }
 
-//等待人物动作加载完成
-fn check_textures(
-    mut next_state: ResMut<NextState<AppState>>,
-    assets: ResMut<PlayerAssets>,
-    image: ResMut<Assets<Image>>,
-) {
-    // Advance the `AppState` once all sprite handles have been loaded by the `AssetServer`
-    for handle in &assets.stand {
-        let Some(texture) = image.get(&handle) else {
-            continue;
-        };
-        // next_state.set(AppState::Finished);
-    }
-    for handle in &assets.walk {
-        let Some(texture) = image.get(&handle) else {
-            continue;
-        };
-        next_state.set(AppState::TextFinished);
-    }
-}
+
 
 fn main() {
     App::new()
@@ -69,38 +50,34 @@ fn main() {
                 }),
                 ..default()
             }),
-            RapierPhysicsPlugin::<SameUserDataFilter>::pixels_per_meter(100.0),
+            RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
             RapierDebugRenderPlugin::default(), //显示碰撞线
         ))
         .add_state::<AppState>()
+        .add_plugins(PlayerPlugin)
         .add_systems(Startup, setup) //初始化
-        .add_systems(OnEnter(AppState::Setup), setup_player_assets) //先读取人物动画,否则会导致读取失败
-        .add_systems(
-            Update,
-            check_textures.run_if(in_state(AppState::SetupFinished)),
-        ) //等待人物读取完成
+        
+         //等待人物读取完成
         .add_systems(OnEnter(AppState::TextFinished), player) //生成人物
-        .insert_resource(PlayerState::Standing)
-        .insert_resource(PlayerGrounded { flag: false })
-        .add_systems(Update, animate_back) //背景动画
-        .add_systems(Update, camera_follow) //镜头跟随
+        // .add_systems(Update, animate_back) //背景动画
+        .add_systems(Update, camera_follow.run_if(in_state(AppState::PlayerFinished))) //镜头跟随
         .add_systems(
             Update,
             player_run.run_if(in_state(AppState::PlayerFinished)),
         ) //人物行走输入事件和人物方向
-        .add_systems(Update, background) //背景跟随
+        // .add_systems(Update, background) //背景跟随
         .add_systems(
             Update,
             animate_player.run_if(in_state(AppState::PlayerFinished)),
         ) //播放人物动画
         .add_systems(
             PostUpdate,
-            player_grounded_detect.run_if(in_state(AppState::PlayerFinished)),
-        )
-        .add_systems(
-            PostUpdate,
             (player_state_machine, player_sprite_machine)
                 .run_if(in_state(AppState::PlayerFinished)),
+        )
+        .add_systems(
+            Update,
+            (player_gravity_machine).run_if(in_state(AppState::PlayerFinished)),
         )
         .add_event::<StateChangeEvent>()
         .run();
@@ -210,19 +187,19 @@ fn setup(
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                commands.spawn(SpriteBundle {
-                    texture: asset_server.load(
-                        tiles["Resource"]["ResourceUrl"]
-                            .to_string()
-                            .replace("\"", ""),
-                    ),
-                    transform: Transform::from_xyz(x, y, z),
-                    sprite: Sprite {
-                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                        ..default()
-                    },
-                    ..default()
-                });
+                // commands.spawn(SpriteBundle {
+                //     texture: asset_server.load(
+                //         tiles["Resource"]["ResourceUrl"]
+                //             .to_string()
+                //             .replace("\"", ""),
+                //     ),
+                //     transform: Transform::from_xyz(x, y, z),
+                //     sprite: Sprite {
+                //         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                //         ..default()
+                //     },
+                //     ..default()
+                // });
             }
         }
     }
@@ -309,8 +286,9 @@ fn setup(
                     Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
+                RigidBody::Fixed,
                 // CustomFilterTag::GroupA,
-                ActiveHooks::FILTER_CONTACT_PAIRS,
+                // ActiveHooks::FILTER_CONTACT_PAIRS,
             )); //摩擦力
         }
         //地图左边墙壁

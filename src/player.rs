@@ -1,7 +1,8 @@
 use crate::{
     animate::{AnimationBundle, AnimationIndices, AnimationTimer},
+    customfilter::CustomFilterTag,
     state_machine::*,
-    AppState, customfilter::CustomFilterTag,
+    AppState,
 };
 use bevy::{
     prelude::*, render::render_phase::PhaseItem, transform::commands, window::PrimaryWindow,
@@ -25,7 +26,7 @@ pub struct PlayerAssets {
 
 // 脸朝向
 #[derive(Debug, Component, Clone, Copy, Default, PartialEq, Eq)]
-pub enum Facing {
+pub enum Direction {
     Left,
     #[default]
     Right,
@@ -61,14 +62,51 @@ pub struct PlayerBundle {
     pub player: Player,
     pub sprite_bundle: SpriteSheetBundle,
     pub animation_bundle: AnimationBundle,
-    pub facing: Facing,
+    pub facing: Direction,
     pub collider: Collider,
     pub rigid_body: RigidBody,
     pub restitution: Restitution,
     pub rotation_constraints: LockedAxes,
     pub velocity: Velocity,
-    pub gravity_scale: GravityScale,
     pub state: PlayerState,
+    pub sleep: Sleeping,
+    pub controller: KinematicCharacterController,
+}
+
+pub struct PlayerPlugin;
+
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(OnEnter(AppState::TextFinished), player) //生成人物
+            .add_systems(
+                Update,
+                check_textures.run_if(in_state(AppState::SetupFinished)),
+            )
+            .add_systems(OnEnter(AppState::Setup), setup_player_assets) //先读取人物动画,否则会导致读取失败
+            .insert_resource(PlayerState::Standing)
+            .insert_resource(PlayerGrounded { flag: false });
+    }
+}
+
+//等待人物动作加载完成
+fn check_textures(
+    mut next_state: ResMut<NextState<AppState>>,
+    assets: ResMut<PlayerAssets>,
+    image: ResMut<Assets<Image>>,
+) {
+    // Advance the `AppState` once all sprite handles have been loaded by the `AssetServer`
+    for handle in &assets.stand {
+        let Some(texture) = image.get(&handle) else {
+            continue;
+        };
+        // next_state.set(AppState::Finished);
+    }
+    for handle in &assets.walk {
+        let Some(texture) = image.get(&handle) else {
+            continue;
+        };
+        next_state.set(AppState::TextFinished);
+    }
 }
 
 pub fn player(
@@ -184,26 +222,22 @@ pub fn player(
                     anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.4)),
                     ..default()
                 },
-                texture_atlas: texture_atlas_handle.clone(),
+                // texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
             animation_bundle: stand.clone(),
-            rigid_body: RigidBody::Dynamic,
+            rigid_body: RigidBody::KinematicPositionBased,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
-            // collider:Collider::ball(8.0),
-            collider: Collider::round_cuboid(0.8, 0.8, 0.1),
-            // collider: Collider::capsule(Vec2::new(0.0, 0.0), Vec2::new(0.0, 0.0),100.0),
-            // collider: Collider::capsule_x(2.0,1.0),
-            // collider: Collider::cuboid(8.0, 2.0),
+            collider: Collider::cuboid(9.0, 4.0),
             velocity: Velocity::zero(),
-            restitution: Restitution::new(-100.0),
-            gravity_scale: GravityScale(10.0),
+            restitution: Restitution::new(0.0),
             player: Player,
-            facing: Facing::Right,
+            facing: Direction::Right,
             state: PlayerState::Standing,
+            sleep: Sleeping::disabled(),
+            controller: KinematicCharacterController::default(),
         },
-        ActiveEvents::CONTACT_FORCE_EVENTS,
         CustomFilterTag::GroupA,
     ));
 
@@ -216,101 +250,34 @@ pub fn player(
     next_state.set(AppState::PlayerFinished);
 }
 
-// 角色奔跑
 pub fn player_run(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut commands: Commands,
-    mut q_player: Query<
-        (
-            &mut Facing,
-            &mut Velocity,
-            &mut TextureAtlasSprite,
-            &mut AnimationIndices,
-            &mut AnimationTimer,
-            &mut Transform,
-            &mut PlayerState,
-            &mut CustomFilterTag,
-        ),
-        With<Player>,
-    >,
-    mut player_state: ResMut<PlayerState>,
-    player_ani: Res<PlayerStateAnimate>,
-    mut state_change_ev: EventWriter<StateChangeEvent>,
-    mut player_grounded: ResMut<PlayerGrounded>,
+    input: Res<Input<KeyCode>>,
+    time: Res<Time>,
+    mut q_con: Query<&mut KinematicCharacterController>,
+    mut q_con_out: Query<&mut KinematicCharacterControllerOutput>,
 ) {
-    if q_player.is_empty() {
-        return;
-    }
-
-    for (mut facing, mut velocity, mut sprite, mut indices, mut timer, mut transform, mut state,mut customfiltertag) in
-        &mut q_player
-    {
-        if keyboard_input.pressed(KeyCode::Down) && player_grounded.flag {
-            if keyboard_input.pressed(KeyCode::AltLeft) && player_grounded.flag {
-                // transform.translation.y -= 50.0;
-                //下跳
-                *customfiltertag=CustomFilterTag::GroupB;
-                
-            } else if player_grounded.flag {
-                *player_state = PlayerState::Prone;
-                *indices = player_ani.prone.indices.clone();
-                *timer = player_ani.prone.timer.clone();
-                state_change_ev.send_default();
-                *state = PlayerState::Prone;
-                return;
-            }
-        } else if keyboard_input.pressed(KeyCode::AltLeft) {
-            if player_grounded.flag {
-                velocity.linvel.y = 600.0;
-            }
-        }
-
-        if keyboard_input.pressed(KeyCode::Left) {
-            if player_grounded.flag {
-                velocity.linvel.x = -220.0;
-            }
-            *facing = Facing::Left;
-            sprite.flip_x = false;
-        } else if keyboard_input.pressed(KeyCode::Right) {
-            if player_grounded.flag {
-                velocity.linvel.x = 220.0;
-            }
-            *facing = Facing::Right;
-            sprite.flip_x = true;
+    let mut player = q_con.single_mut();
+    for (output) in q_con_out.iter() {
+        if output.grounded == true {
+            println!("touches the ground: {:?}", output.grounded);
         } else {
-            if player_grounded.flag {
-                velocity.linvel.x = 0.0;
-            }
+            println!("touches the ground: {:?}", output.grounded);
         }
-
-        //
     }
-}
 
-//通过碰撞检测人物是否在地面上
-pub fn player_grounded_detect(
-    mut player_grounded: ResMut<PlayerGrounded>,
-    mut contact_force_events: EventReader<ContactForceEvent>,
-    mut player_state: ResMut<PlayerState>,
-    mut q_player: Query<
-        (
-            &mut CustomFilterTag,
-        ),
-        With<Player>,
-    >,
-    player_ani: Res<PlayerStateAnimate>,
-    mut state_change_ev: EventWriter<StateChangeEvent>,
-) {
-    // for contact_force_event in contact_force_events.iter() {
-    //     println!("Received contact force event: {contact_force_event:?}");
-    // }
-    let mut tags=q_player.single_mut();
-    let event = contact_force_events.iter().next();
-    if event.is_some() {
-        player_grounded.flag = true;
-    } else {  
-        player_grounded.flag = false;
+    let mut translation = Vec2::new(0.0, 0.0);
+
+    if input.pressed(KeyCode::Right) {
+        translation.x += time.delta_seconds() * 200.0;
     }
+
+    if input.pressed(KeyCode::Left) {
+        translation.x += time.delta_seconds() * 200.0 * -1.0;
+    }
+
+    translation.y += time.delta_seconds() * 10.0 * -1.0;
+
+    player.translation = Some(translation);
 }
 
 pub fn setup_player_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
