@@ -20,10 +20,11 @@ pub fn camera_follow(
     if q_player.is_empty() {
         return;
     }
+    
     let player_pos = q_player.single().translation.truncate();
     let camera_pos = q_camera.single().translation.truncate();
     let window = q_window.get_single_mut().ok().unwrap();
-
+    // println!("{:?}",player_pos.x);
     let mut camera_transform = q_camera.single_mut();
     if camera_pos.distance(player_pos) < 0.1 {
         // 视为已达到player位置

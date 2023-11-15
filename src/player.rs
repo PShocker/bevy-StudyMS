@@ -304,12 +304,20 @@ fn update_group(mut commands: Commands,mut query: Query<(
         return;
     }
     let mut group=CollisionGroups::new(Group::GROUP_1, Group::GROUP_1);
-    if  output.desired_translation.y>0.0{
-        group.filters=Group::GROUP_2;
-    }
     if  output.desired_translation.y<0.0{
         group.filters=Group::GROUP_1;
     }
+    if  output.desired_translation.y>0.0{
+        group.filters=Group::GROUP_2;
+    }
+    if  output.desired_translation.x>0.0{
+        group.filters=group.filters|Group::GROUP_4;
+    }
+    if  output.desired_translation.x<0.0{
+        group.filters=group.filters|Group::GROUP_4;
+    }
+    
+    println!("{:?}",group.filters);
 
     player.filter_groups=Some(group);
 

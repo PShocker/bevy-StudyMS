@@ -25,8 +25,10 @@ pub fn get_foothold_group(p1: Vec2, p2: Vec2) -> Group {
     //垂直
     if p1.x == p2.x {
         if p1.y < p2.y {
+            // println!("{:?},x{:?}", Group::GROUP_3,p1.x);
             return Group::GROUP_3;
         } else {
+            // println!("{:?},x{:?}", Group::GROUP_4,p1.x);
             return Group::GROUP_4;
         }
     }

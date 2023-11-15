@@ -261,7 +261,6 @@ fn setup(
                     ),
                 ),
                 RigidBody::Fixed,
-                // CustomFilterTag::GroupA,
                 // ActiveHooks::FILTER_CONTACT_PAIRS,
             )); //摩擦力
         }
@@ -274,6 +273,10 @@ fn setup(
         commands.spawn((Collider::segment(
             Vec2::new(right as f32, -10000.0),
             Vec2::new(right as f32, 10000.0),
+        ),
+        CollisionGroups::new(
+            Group::GROUP_1,
+            Group::GROUP_4|Group::GROUP_1|Group::GROUP_5,
         ),));
     }
     next_state.set(AppState::SetupFinished);
