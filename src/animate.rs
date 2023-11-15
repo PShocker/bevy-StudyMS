@@ -42,11 +42,11 @@ pub fn animate_player(
         With<Player>,
     >,
     time: Res<Time>,
-    // mut state_change_ev: EventReader<StateChangeEvent>,
+    mut state_change_ev: EventReader<StateChangeEvent>,
 ) {
     for (entity, mut animation, mut sprite) in &mut q_player {
         // println!("{:?}",animation.name);
-        if animation.timer.0.tick(time.delta()).just_finished() {
+        if animation.timer.0.tick(time.delta()).just_finished() ||!state_change_ev.is_empty(){
             let current_idx = animation
                 .indices.sprite_indices.iter()
                 .position(|s| *s == sprite.index)
@@ -56,6 +56,7 @@ pub fn animate_player(
                 % animation.indices.sprite_indices.len();
 
             sprite.index = animation.indices.sprite_indices[next_idx];
+            // state_change_ev.clear();
         }
     }
 }

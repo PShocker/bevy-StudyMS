@@ -86,10 +86,11 @@ impl Plugin for PlayerPlugin {
                     update_direction,
                     update_flip,
                     update_player_animation,
+                    update_group,
                     update_input,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
-            );
+            ).add_event::<StateChangeEvent>();
     }
 }
 
@@ -159,7 +160,7 @@ fn player(
                 anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                 ..default()
             },
-            // texture_atlas: texture_atlas_handle.clone(),
+            texture_atlas: texture_atlas_handle.clone(),
             transform: Transform::from_xyz(0.0, 0.0, 100.0),
             ..default()
         },
@@ -203,6 +204,11 @@ pub fn update_input(
 
     let mut translation = Vec2::new(0.0, 0.0);
 
+    if  player.translation!=None{
+        println!("{:?}",player.translation); 
+    }
+    
+
     if input.pressed(KeyCode::Right) {
         translation.x += time.delta_seconds() * 200.0;
     }
@@ -214,22 +220,18 @@ pub fn update_input(
     if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
         //下跳
         // player.filter_flags=QueryFilterFlags::ONLY_DYNAMIC;
-        player.filter_groups=Some((CollisionGroups::new(Group::GROUP_1, Group::GROUP_2)));
-        println!("xiatiao");
+        player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_5));
+        // println!("xiatiao");
     } else if input.pressed(KeyCode::AltLeft) {
-        translation.y += time.delta().as_secs_f32() * (600.0 / 1.5) * 1.0;
+        translation.y += time.delta().as_secs_f32() * (700.0 / 1.5) * 1.0;
     }
 
     //重力
-    if !output.grounded {
-        translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
-    }
+    // if !output.grounded {
+        translation.y += time.delta().as_secs_f32() * (350.0 / 1.5) * -1.0;
+    // }
 
     player.translation = Some(translation);
-    // match player.translation {
-    //     Some(vec) => player.translation = Some(translation),
-    //     None => player.translation = Some(Vec2::new(0.0, 0.0)),
-    // }
 }
 
 fn update_player_animation(
@@ -240,6 +242,8 @@ fn update_player_animation(
         With<Animation>,
     >,
     assets: ResMut<AnimateAssets>,
+    mut state_change_ev: EventWriter<StateChangeEvent>,
+
 ) {
     if query.is_empty() {
         return;
@@ -251,6 +255,7 @@ fn update_player_animation(
             commands
                 .entity(player)
                 .insert(assets.animate_map.get("walk").unwrap().clone());
+            state_change_ev.send_default();
         }
         // println!("walk");
     } else if output.desired_translation.x == 0.0 && output.grounded {
@@ -260,12 +265,16 @@ fn update_player_animation(
                 commands
                     .entity(player)
                     .insert(assets.animate_map.get("prone").unwrap().clone());
+            state_change_ev.send_default();
+
             }
         } else {
             if animation.name != "stand" {
                 commands
                     .entity(player)
                     .insert(assets.animate_map.get("stand").unwrap().clone());
+            state_change_ev.send_default();
+
             }
         }
     } else if !output.grounded {
@@ -275,9 +284,35 @@ fn update_player_animation(
             commands
                 .entity(player)
                 .insert(assets.animate_map.get("jump").unwrap().clone());
+            state_change_ev.send_default();
         }
     }
     // println!("{:?}", animation);
+}
+
+fn update_group(mut commands: Commands,mut query: Query<(
+    &mut KinematicCharacterController,
+    &mut KinematicCharacterControllerOutput,
+)>,) {
+    if query.is_empty() {
+        return;
+    }
+    
+    let (mut player, output) = query.single_mut();
+    // println!("{:?}",output.desired_translation.y);
+    if player.filter_groups.unwrap().filters== Group::GROUP_5 && output.desired_translation.y> -4.0{
+        return;
+    }
+    let mut group=CollisionGroups::new(Group::GROUP_1, Group::GROUP_1);
+    if  output.desired_translation.y>0.0{
+        group.filters=Group::GROUP_2;
+    }
+    if  output.desired_translation.y<0.0{
+        group.filters=Group::GROUP_1;
+    }
+
+    player.filter_groups=Some(group);
+
 }
 
 fn update_direction(

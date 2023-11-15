@@ -47,10 +47,10 @@ fn main() {
         .add_state::<AppState>()
         .add_plugins(PlayerPlugin)
         .add_systems(Startup, setup) //初始化
-        // .add_systems(Update, animate_back) //背景动画
+        .add_systems(Update, animate_back) //背景动画
         .add_systems(Update, camera_follow) //镜头跟随
         //人物行走输入事件和人物方向
-        // .add_systems(Update, background) //背景跟随
+        .add_systems(Update, background) //背景跟随
         .add_systems(Update, animate_player) //播放人物动画
         .run();
 }
@@ -159,19 +159,19 @@ fn setup(
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                // commands.spawn(SpriteBundle {
-                //     texture: asset_server.load(
-                //         tiles["Resource"]["ResourceUrl"]
-                //             .to_string()
-                //             .replace("\"", ""),
-                //     ),
-                //     transform: Transform::from_xyz(x, y, z),
-                //     sprite: Sprite {
-                //         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                //         ..default()
-                //     },
-                //     ..default()
-                // });
+                commands.spawn(SpriteBundle {
+                    texture: asset_server.load(
+                        tiles["Resource"]["ResourceUrl"]
+                            .to_string()
+                            .replace("\"", ""),
+                    ),
+                    transform: Transform::from_xyz(x, y, z),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                        ..default()
+                    },
+                    ..default()
+                });
             }
         }
     }
@@ -199,7 +199,7 @@ fn setup(
                     let background = BackGround::new(
                         id, x, y, cx, cy, rx, ry, alpha, flip_x, front, ani, types, resource,
                     );
-                    // commands.spawn(background);
+                    commands.spawn(background);
                 }
                 1 => {}
                 _ => println!("Ani Other"),
