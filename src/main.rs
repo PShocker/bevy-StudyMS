@@ -5,7 +5,6 @@ use background::{background, BackGround, BackGroundEdge};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
-use customfilter::{CustomFilterTag};
 use foothold::{get_foothold_group, FootHold};
 use player::PlayerPlugin;
 use std::{
@@ -18,7 +17,6 @@ use crate::utils::{cal_ax, cal_ay};
 mod animate;
 mod background;
 mod camera;
-mod customfilter;
 mod foothold;
 mod player;
 mod utils;
@@ -31,8 +29,6 @@ enum AppState {
     TextFinished,
     PlayerFinished,
 }
-
-
 
 fn main() {
     App::new()
@@ -51,15 +47,11 @@ fn main() {
         .add_state::<AppState>()
         .add_plugins(PlayerPlugin)
         .add_systems(Startup, setup) //初始化
-         
         // .add_systems(Update, animate_back) //背景动画
         .add_systems(Update, camera_follow) //镜头跟随
-         //人物行走输入事件和人物方向
+        //人物行走输入事件和人物方向
         // .add_systems(Update, background) //背景跟随
-        .add_systems(
-            Update,
-            animate_player,
-        ) //播放人物动画
+        .add_systems(Update, animate_player) //播放人物动画
         .run();
 }
 
@@ -261,9 +253,12 @@ fn setup(
                     Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
-                get_foothold_group(
-                    Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
-                    Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+                CollisionGroups::new(
+                    Group::GROUP_1,
+                    get_foothold_group(
+                        Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
+                        Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+                    ),
                 ),
                 RigidBody::Fixed,
                 // CustomFilterTag::GroupA,

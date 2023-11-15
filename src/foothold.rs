@@ -1,6 +1,5 @@
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
-
-use crate::customfilter::CustomFilterTag;
+use bevy_rapier2d::geometry::Group;
 
 #[derive(Component, Debug)]
 pub struct FootHold {
@@ -14,22 +13,22 @@ pub struct FootHold {
     pub id: i32,
 }
 
-pub fn get_foothold_group(p1: Vec2, p2: Vec2) -> CustomFilterTag {
+pub fn get_foothold_group(p1: Vec2, p2: Vec2) -> Group {
     //先判断平行
     if p1.y == p2.y {
         if p1.x < p2.x {
-            return CustomFilterTag::GroupA;
+            return Group::GROUP_1;
         } else {
-            return CustomFilterTag::GroupB;
+            return Group::GROUP_2;
         }
     }
     //垂直
     if p1.x == p2.x {
         if p1.y < p2.y {
-            return CustomFilterTag::GroupC;
+            return Group::GROUP_3;
         } else {
-            return CustomFilterTag::GroupD;
+            return Group::GROUP_4;
         }
     }
-    return CustomFilterTag::GroupA;
+    return Group::GROUP_1;
 }

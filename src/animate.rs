@@ -43,7 +43,6 @@ pub fn animate_player(
     >,
     time: Res<Time>,
     // mut state_change_ev: EventReader<StateChangeEvent>,
-    mut player_state: ResMut<PlayerState>,
 ) {
     for (entity, mut animation, mut sprite) in &mut q_player {
         // println!("{:?}",animation.name);

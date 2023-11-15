@@ -1,7 +1,4 @@
-use crate::{
-    animate::{Animation, AnimationIndices, AnimationTimer},
-    customfilter::CustomFilterTag,
-};
+use crate::animate::{Animation, AnimationIndices, AnimationTimer};
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;
 
@@ -91,10 +88,8 @@ impl Plugin for PlayerPlugin {
                     update_player_animation,
                     update_input,
                 )
-                    .run_if(in_state(Load::PlayerFinished)),
-            ) //先读取人物动画,否则会导致读取失败
-            .insert_resource(PlayerState::Standing)
-            .insert_resource(PlayerGrounded { flag: false });
+                    .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
+            );
     }
 }
 
@@ -109,6 +104,8 @@ fn check_textures(
     for map in &assets.handle_map {
         if LoadState::Loaded == asset_server.get_group_load_state(map.1.iter().map(|h| h.id())) {
             next_state.set(Load::AssetsLoaded);
+        } else {
+            next_state.set(Load::Loading);
         }
     }
 }
@@ -155,35 +152,33 @@ fn player(
     }
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    commands.spawn((
-        PlayerBundle {
-            sprite_bundle: SpriteSheetBundle {
-                sprite: TextureAtlasSprite {
-                    index: 0,
-                    anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
-                    ..default()
-                },
-                // texture_atlas: texture_atlas_handle.clone(),
-                transform: Transform::from_xyz(0.0, 0.0, 100.0),
+    commands.spawn((PlayerBundle {
+        sprite_bundle: SpriteSheetBundle {
+            sprite: TextureAtlasSprite {
+                index: 0,
+                anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                 ..default()
             },
-            animation: animate_map.get("walk").unwrap().clone(),
-            rigid_body: RigidBody::KinematicPositionBased,
-            rotation_constraints: LockedAxes::ROTATION_LOCKED,
-            collider: Collider::cuboid(9.0, 4.0),
-            velocity: Velocity::zero(),
-            restitution: Restitution::new(0.0),
-            player: Player,
-            direction: Direction::Right,
-            state: PlayerState::Standing,
-            sleep: Sleeping::disabled(),
-            controller: KinematicCharacterController {
-                translation: Some(Vec2::new(0.0, 0.0)),
-                ..default()
-            },
+            // texture_atlas: texture_atlas_handle.clone(),
+            transform: Transform::from_xyz(0.0, 0.0, 100.0),
+            ..default()
         },
-        CustomFilterTag::GroupA,
-    ));
+        animation: animate_map.get("walk").unwrap().clone(),
+        rigid_body: RigidBody::KinematicPositionBased,
+        rotation_constraints: LockedAxes::ROTATION_LOCKED,
+        collider: Collider::cuboid(9.0, 4.0),
+        velocity: Velocity::zero(),
+        restitution: Restitution::new(0.0),
+        player: Player,
+        direction: Direction::Right,
+        state: PlayerState::Standing,
+        sleep: Sleeping::disabled(),
+        controller: KinematicCharacterController {
+            translation: Some(Vec2::new(0.0, 0.0)),
+            filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_1)),
+            ..default()
+        },
+    },));
     commands.insert_resource(AnimateAssets {
         animate_map: animate_map,
     });
@@ -193,7 +188,9 @@ fn player(
 pub fn update_input(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
+    mut commands: Commands,
     mut query: Query<(
+        Entity,
         &mut KinematicCharacterController,
         &mut KinematicCharacterControllerOutput,
     )>,
@@ -202,7 +199,7 @@ pub fn update_input(
         return;
     }
 
-    let (mut player, output) = query.single_mut();
+    let (mut enity, mut player, output) = query.single_mut();
 
     let mut translation = Vec2::new(0.0, 0.0);
 
@@ -213,9 +210,16 @@ pub fn update_input(
     if input.pressed(KeyCode::Left) {
         translation.x += time.delta_seconds() * 200.0 * -1.0;
     }
-    if input.pressed(KeyCode::AltLeft) {
+
+    if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+        //下跳
+        // player.filter_flags=QueryFilterFlags::ONLY_DYNAMIC;
+        player.filter_groups=Some((CollisionGroups::new(Group::GROUP_1, Group::GROUP_2)));
+        println!("xiatiao");
+    } else if input.pressed(KeyCode::AltLeft) {
         translation.y += time.delta().as_secs_f32() * (600.0 / 1.5) * 1.0;
     }
+
     //重力
     if !output.grounded {
         translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
