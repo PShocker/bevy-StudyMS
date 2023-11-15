@@ -1,6 +1,6 @@
 //! Displays a single [`Sprite`], created from an image.
 
-use animate::{animate_back, animate_player, AnimateObj};
+use animate::{animate_back, animate_player, Animations};
 use background::{background, BackGround, BackGroundEdge};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
@@ -21,7 +21,6 @@ mod camera;
 mod customfilter;
 mod foothold;
 mod player;
-mod state_machine;
 mod utils;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, States)]
@@ -97,7 +96,7 @@ fn setup(
                     / 1000000000.0; //除以1000000000保证精度
 
                 //具有动画效果的obj
-                let mut animationsprite = AnimateObj {
+                let mut animationsprite = Animations {
                     index: -1,
                     sprite: Vec::new(),
                     delays: Vec::new(),
@@ -168,19 +167,19 @@ fn setup(
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                commands.spawn(SpriteBundle {
-                    texture: asset_server.load(
-                        tiles["Resource"]["ResourceUrl"]
-                            .to_string()
-                            .replace("\"", ""),
-                    ),
-                    transform: Transform::from_xyz(x, y, z),
-                    sprite: Sprite {
-                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                        ..default()
-                    },
-                    ..default()
-                });
+                // commands.spawn(SpriteBundle {
+                //     texture: asset_server.load(
+                //         tiles["Resource"]["ResourceUrl"]
+                //             .to_string()
+                //             .replace("\"", ""),
+                //     ),
+                //     transform: Transform::from_xyz(x, y, z),
+                //     sprite: Sprite {
+                //         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                //         ..default()
+                //     },
+                //     ..default()
+                // });
             }
         }
     }
@@ -208,7 +207,7 @@ fn setup(
                     let background = BackGround::new(
                         id, x, y, cx, cy, rx, ry, alpha, flip_x, front, ani, types, resource,
                     );
-                    commands.spawn(background);
+                    // commands.spawn(background);
                 }
                 1 => {}
                 _ => println!("Ani Other"),

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::mesh::Indices};
 use bevy::time::Time;
 
 use crate::player::{Player, PlayerState, StateChangeEvent};
@@ -12,15 +12,16 @@ pub struct AnimationIndices {
     pub sprite_indices: Vec<usize>,
 }
 
-#[derive(Clone, Debug, Default, Bundle)]
-pub struct AnimationBundle {
+#[derive(Clone, Debug, Default, Component)]
+pub struct Animation {
     pub timer: AnimationTimer,
     pub indices: AnimationIndices,
+    pub name: String,
 }
 
 //
 #[derive(Component)]
-pub struct AnimateObj {
+pub struct Animations {
     pub sprite: Vec<SpriteBundle>,
     pub index: i32,
     pub delays: Vec<f32>,
@@ -35,8 +36,7 @@ pub fn animate_player(
     mut q_player: Query<
         (
             Entity,
-            &mut AnimationTimer,
-            &mut AnimationIndices,
+            &mut Animation,
             &mut TextureAtlasSprite,
         ),
         With<Player>,
@@ -45,36 +45,24 @@ pub fn animate_player(
     // mut state_change_ev: EventReader<StateChangeEvent>,
     mut player_state: ResMut<PlayerState>,
 ) {
-    for (entity, mut timer, mut indices, mut sprite) in &mut q_player {
-        if *player_state == PlayerState::Prone {
-            sprite.anchor = bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.20));
-        } else {
-            sprite.anchor = bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.50));
+    for (entity, mut animation, mut sprite) in &mut q_player {
+        // println!("{:?}",animation.name);
+        if animation.timer.0.tick(time.delta()).just_finished() {
+            let current_idx = animation
+                .indices.sprite_indices.iter()
+                .position(|s| *s == sprite.index)
+                .unwrap_or(0); // default to 0 if the current sprite is not in the set
+
+            let next_idx = (current_idx + animation.timer.0.times_finished_this_tick() as usize)
+                % animation.indices.sprite_indices.len();
+
+            sprite.index = animation.indices.sprite_indices[next_idx];
         }
-        timer.0.tick(time.delta());
-        if timer.0.just_finished() {
-            sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
-                indices.index = 0;
-                indices.sprite_indices[indices.index]
-            } else {
-                indices.index += 1;
-                indices.sprite_indices[indices.index]
-            };
-        } 
-        // else if state_change_ev.iter().next().is_some() {
-        //     sprite.index = if indices.index == indices.sprite_indices.len() - 1 {
-        //         indices.index = 0;
-        //         indices.sprite_indices[indices.index]
-        //     } else {
-        //         indices.index += 1;
-        //         indices.sprite_indices[indices.index]
-        //     };
-        // }
     }
 }
 
 //背景动画,背景obj的动画效果
-pub fn animate_back(time: Res<Time>, mut commands: Commands, mut query: Query<&mut AnimateObj>) {
+pub fn animate_back(time: Res<Time>, mut commands: Commands, mut query: Query<&mut Animations>) {
     // println!("{:?}", time.raw_elapsed_seconds());
 
     for mut s in &mut query {

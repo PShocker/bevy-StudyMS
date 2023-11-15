@@ -1,8 +1,6 @@
 use crate::{
-    animate::{AnimationBundle, AnimationIndices, AnimationTimer},
+    animate::{Animation, AnimationIndices, AnimationTimer},
     customfilter::CustomFilterTag,
-    state_machine::*,
-    AppState,
 };
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
 use bevy_rapier2d::prelude::*;
@@ -21,7 +19,7 @@ pub struct PlayerAssets {
 
 #[derive(Debug, Resource)]
 pub struct AnimateAssets {
-    pub animate_map: HashMap<String, AnimationBundle>,
+    pub animate_map: HashMap<String, Animation>,
 }
 
 // 脸朝向
@@ -53,8 +51,8 @@ pub struct PlayerGrounded {
 pub struct PlayerBundle {
     pub player: Player,
     pub sprite_bundle: SpriteSheetBundle,
-    pub animation_bundle: AnimationBundle,
-    pub facing: Direction,
+    pub animation: Animation,
+    pub direction: Direction,
     pub collider: Collider,
     pub rigid_body: RigidBody,
     pub restitution: Restitution,
@@ -79,13 +77,22 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<Load>()
+            .add_systems(OnEnter(Load::Setup), setup_player_assets)
             .add_systems(OnEnter(Load::AssetsLoaded), player) //生成人物
             .add_systems(
                 Update,
                 check_textures.run_if(in_state(Load::Loading)), //等待人物读取完成
             )
-            .add_systems(OnEnter(Load::Setup), setup_player_assets)
-            .add_systems(Update, player_run.run_if(in_state(Load::PlayerFinished))) //先读取人物动画,否则会导致读取失败
+            .add_systems(
+                Update,
+                (
+                    update_input,
+                    update_direction,
+                    update_flip,
+                    update_player_animation,
+                )
+                    .run_if(in_state(Load::PlayerFinished)),
+            ) //先读取人物动画,否则会导致读取失败
             .insert_resource(PlayerState::Standing)
             .insert_resource(PlayerGrounded { flag: false });
     }
@@ -136,12 +143,13 @@ fn player(
         for handle in map.1 {
             indices.push(texture_atlas.get_texture_index(&handle).unwrap())
         }
-        let animate = AnimationBundle {
+        let animate = Animation {
             timer: AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
             indices: AnimationIndices {
                 index: 0,
                 sprite_indices: indices,
             },
+            name: map.0.to_string(),
         };
         animate_map.insert(map.0.to_string(), animate);
     }
@@ -155,21 +163,24 @@ fn player(
                     anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                texture_atlas: texture_atlas_handle.clone(),
+                // texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
-            animation_bundle: animate_map.get("walk").unwrap().clone(),
+            animation: animate_map.get("walk").unwrap().clone(),
             rigid_body: RigidBody::KinematicPositionBased,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
             collider: Collider::cuboid(9.0, 4.0),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
             player: Player,
-            facing: Direction::Right,
+            direction: Direction::Right,
             state: PlayerState::Standing,
             sleep: Sleeping::disabled(),
-            controller: KinematicCharacterController::default(),
+            controller: KinematicCharacterController {
+                translation: Some(Vec2::new(0.0, 0.0)),
+                ..default()
+            },
         },
         CustomFilterTag::GroupA,
     ));
@@ -179,20 +190,17 @@ fn player(
     next_state.set(Load::PlayerFinished);
 }
 
-pub fn player_run(
+pub fn update_input(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
-    mut q_char: Query<&mut KinematicCharacterController>,
-    mut q_out: Query<&mut KinematicCharacterControllerOutput>,
+    // mut query: Query<(
+    //     &mut KinematicCharacterControllerOutput,
+    //     &mut KinematicCharacterController,
+    // )>,
+    mut query: Query<&mut KinematicCharacterController>,
 ) {
-    let mut player = q_char.single_mut();
-    for (output) in q_out.iter() {
-        if output.grounded == true {
-            println!("touches the ground: {:?}", output.grounded);
-        } else {
-            println!("touches the ground: {:?}", output.grounded);
-        }
-    }
+    // let (output, mut player) = query.single_mut();
+    let mut player = query.single_mut();
 
     let mut translation = Vec2::new(0.0, 0.0);
 
@@ -203,10 +211,97 @@ pub fn player_run(
     if input.pressed(KeyCode::Left) {
         translation.x += time.delta_seconds() * 200.0 * -1.0;
     }
-
-    translation.y += time.delta_seconds() * 200.0 * -1.0;
+    if input.pressed(KeyCode::AltLeft) {
+        translation.y += time.delta().as_secs_f32() * (600.0 / 1.5) * 1.0;
+    }
+    //重力
+    // if !output.grounded {
+    translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
+    // }
 
     player.translation = Some(translation);
+    // match player.translation {
+    //     Some(vec) => player.translation = Some(translation),
+    //     None => player.translation = Some(Vec2::new(0.0, 0.0)),
+    // }
+}
+
+fn update_player_animation(
+    input: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    mut query: Query<
+        (Entity, &KinematicCharacterControllerOutput, &mut Animation),
+        With<Animation>,
+    >,
+    assets: ResMut<AnimateAssets>,
+) {
+    if query.is_empty() {
+        return;
+    }
+    let (player, output, mut animation) = query.single_mut();
+    if output.desired_translation.x != 0.0 && output.grounded {
+        //walk状态
+        if animation.name != "walk" {
+            commands
+                .entity(player)
+                .insert(assets.animate_map.get("walk").unwrap().clone());
+        }
+        // println!("walk");
+    } else if output.desired_translation.x == 0.0 && output.grounded {
+        //stand状态或prone状态
+        if input.pressed(KeyCode::Down) {
+            if animation.name != "prone" {
+                commands
+                    .entity(player)
+                    .insert(assets.animate_map.get("prone").unwrap().clone());
+            }
+        } else {
+            if animation.name != "stand" {
+                commands
+                    .entity(player)
+                    .insert(assets.animate_map.get("stand").unwrap().clone());
+            }
+        }
+    } else if !output.grounded {
+        //jump状态
+        // *animation = assets.animate_map.get("jump").unwrap().clone();
+        if animation.name != "jump" {
+            commands
+                .entity(player)
+                .insert(assets.animate_map.get("jump").unwrap().clone());
+        }
+    }
+    // println!("{:?}", animation);
+}
+
+fn update_direction(
+    mut commands: Commands,
+    query: Query<(Entity, &KinematicCharacterControllerOutput)>,
+) {
+    if query.is_empty() {
+        return;
+    }
+
+    let (player, output) = query.single();
+
+    if output.desired_translation.x > 0.0 {
+        commands.entity(player).insert(Direction::Right);
+    } else if output.desired_translation.x < 0.0 {
+        commands.entity(player).insert(Direction::Left);
+    }
+}
+
+fn update_flip(mut query: Query<(&mut TextureAtlasSprite, &Direction)>) {
+    if query.is_empty() {
+        return;
+    }
+
+    let (mut sprite, direction) = query.single_mut();
+
+    match direction {
+        Direction::Right => sprite.flip_x = true,
+        Direction::Left => sprite.flip_x = false,
+    }
 }
 
 fn setup_player_assets(
