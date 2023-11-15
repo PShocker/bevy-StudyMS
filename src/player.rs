@@ -86,10 +86,10 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 Update,
                 (
-                    update_input,
                     update_direction,
                     update_flip,
                     update_player_animation,
+                    update_input,
                 )
                     .run_if(in_state(Load::PlayerFinished)),
             ) //先读取人物动画,否则会导致读取失败
@@ -193,14 +193,16 @@ fn player(
 pub fn update_input(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
-    // mut query: Query<(
-    //     &mut KinematicCharacterControllerOutput,
-    //     &mut KinematicCharacterController,
-    // )>,
-    mut query: Query<&mut KinematicCharacterController>,
+    mut query: Query<(
+        &mut KinematicCharacterController,
+        &mut KinematicCharacterControllerOutput,
+    )>,
 ) {
-    // let (output, mut player) = query.single_mut();
-    let mut player = query.single_mut();
+    if query.is_empty() {
+        return;
+    }
+
+    let (mut player, output) = query.single_mut();
 
     let mut translation = Vec2::new(0.0, 0.0);
 
@@ -215,9 +217,9 @@ pub fn update_input(
         translation.y += time.delta().as_secs_f32() * (600.0 / 1.5) * 1.0;
     }
     //重力
-    // if !output.grounded {
-    translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
-    // }
+    if !output.grounded {
+        translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
+    }
 
     player.translation = Some(translation);
     // match player.translation {
