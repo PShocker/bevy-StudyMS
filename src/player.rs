@@ -207,11 +207,11 @@ pub fn update_input(
     }
 
     if input.pressed(KeyCode::Right) {
-        translation.x += time.delta_seconds() * 200.0;
+        translation.x += time.delta_seconds() * 300.0;
     }
 
     if input.pressed(KeyCode::Left) {
-        translation.x += time.delta_seconds() * 200.0 * -1.0;
+        translation.x += time.delta_seconds() * 300.0 * -1.0;
     }
 
     if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
