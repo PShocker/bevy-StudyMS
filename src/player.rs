@@ -158,7 +158,7 @@ fn player(
                 anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                 ..default()
             },
-            // texture_atlas: texture_atlas_handle.clone(),
+            texture_atlas: texture_atlas_handle.clone(),
             transform: Transform::from_xyz(0.0, -500.0, 100.0),
             ..default()
         },
@@ -337,7 +337,7 @@ fn update_group(
     if output.desired_translation.y < 0.0 {
         group.memberships = Group::GROUP_1;
     }
-    if output.desired_translation.y > 0.0 {
+    if output.desired_translation.y >= 0.0 {
         group.memberships = Group::GROUP_2;
     }
 
@@ -348,7 +348,7 @@ fn update_group(
         group.memberships = group.memberships | Group::GROUP_4;
     }
 
-    // println!("{:?}",group.memberships);
+    println!("{:?}",group.memberships);
 
     player.filter_groups = Some(group);
 }

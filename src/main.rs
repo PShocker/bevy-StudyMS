@@ -148,19 +148,19 @@ fn setup(
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                // commands.spawn(SpriteBundle {
-                //     texture: asset_server.load(
-                //         tiles["Resource"]["ResourceUrl"]ssssssss
-                //             .to_string()
-                //             .replace("\"", ""),
-                //     ),
-                //     transform: Transform::from_xyz(x, y, z),
-                //     sprite: Sprite {
-                //         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                //         ..default()
-                //     },
-                //     ..default()
-                // });
+                commands.spawn(SpriteBundle {
+                    texture: asset_server.load(
+                        tiles["Resource"]["ResourceUrl"]
+                            .to_string()
+                            .replace("\"", ""),
+                    ),
+                    transform: Transform::from_xyz(x, y, z),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                        ..default()
+                    },
+                    ..default()
+                });
             }
         }
     }
