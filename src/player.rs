@@ -65,6 +65,11 @@ enum Load {
     PlayerFinished,
 }
 
+const PLAYER_VELOCITY_X: f32 = 200.0;
+const PLAYER_VELOCITY_Y: f32 = 290.0;
+
+const MAX_JUMP_HEIGHT: f32 = 90.0;
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -84,7 +89,11 @@ impl Plugin for PlayerPlugin {
                     update_player_animation,
                     update_group,
                     update_downjump,
-                    update_input,
+                    update_walk,
+                    update_jump,
+                    update_rise,
+                    update_fall,
+                    // update_print,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
             )
@@ -114,7 +123,7 @@ fn player(
     asset_server: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Image>>,
-    mut assets: ResMut<PlayerAssets>,
+    assets: ResMut<PlayerAssets>,
     mut next_state: ResMut<NextState<Load>>,
 ) {
     let mut texture_atlas_builder = TextureAtlasBuilder::default();
@@ -173,7 +182,6 @@ fn player(
         state: PlayerState::Standing,
         sleep: Sleeping::disabled(),
         controller: KinematicCharacterController {
-            translation: Some(Vec2::new(0.0, 0.0)),
             filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
             ..default()
         },
@@ -184,52 +192,112 @@ fn player(
     next_state.set(Load::PlayerFinished);
 }
 
-pub fn update_input(
+pub fn update_walk(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut KinematicCharacterController,
-        &mut KinematicCharacterControllerOutput,
-    )>,
+    mut query: Query<(Entity, &mut KinematicCharacterController)>,
 ) {
     if query.is_empty() {
         return;
     }
 
-    let (mut enity, mut player, output) = query.single_mut();
+    let (mut enity, mut player) = query.single_mut();
 
-    let mut translation = Vec2::new(0.0, 0.0);
+    let mut movement=0.0;
 
     // if player.translation != None {
     //     println!("{:?}", player.translation);
     // }
 
     if input.pressed(KeyCode::Right) {
-        translation.x += time.delta_seconds() * 300.0;
+        movement = time.delta_seconds() * PLAYER_VELOCITY_X;
     }
 
     if input.pressed(KeyCode::Left) {
-        translation.x += time.delta_seconds() * 300.0 * -1.0;
+        movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
     }
 
-    if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-        //下跳
-        let timer = DownJumpTimer(Timer::from_seconds(0.2, TimerMode::Once));
-        player.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
-        commands.entity(enity).insert(timer);
-        // println!("xiatiao");
-    } else if input.pressed(KeyCode::AltLeft) {
-        translation.y += time.delta().as_secs_f32() * (300.0 / 1.5) * 1.0;
-    }
-
-    //重力
-    // if !output.grounded {
-    translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
+    // if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+    //     //下跳
+    //     player.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
+    //     commands
+    //         .entity(enity)
+    //         .insert(DownJumpTimer(Timer::from_seconds(0.1, TimerMode::Once)));
+    // } else if input.pressed(KeyCode::AltLeft) {
+    //     translation.y += time.delta().as_secs_f32() * (300.0 / 1.5) * 1.0;
     // }
 
-    player.translation = Some(translation);
+    // //重力
+    // // if !output.grounded {
+    // translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
+    // // }
+    match player.translation {
+        Some(vec) => player.translation = Some(Vec2::new(movement, vec.y)),
+        None => player.translation = Some(Vec2::new(movement, 0.0)),
+    }
+}
+
+#[derive(Component)]
+struct Jump(f32);
+
+fn update_jump(
+    input: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    query: Query<
+        (Entity, &KinematicCharacterControllerOutput),
+        (With<KinematicCharacterController>, Without<Jump>),
+    >,
+) {
+    if query.is_empty() {
+        return;
+    }
+
+    let (player, output) = query.single();
+
+    if input.pressed(KeyCode::AltLeft) {
+        commands.entity(player).insert(Jump(0.0));
+    }
+}
+
+fn update_rise(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<(Entity, &mut KinematicCharacterController, &mut Jump)>,
+) {
+    if query.is_empty() {
+        return;
+    }
+
+    let (entity, mut player, mut jump) = query.single_mut();
+
+    let mut movement = time.delta().as_secs_f32() * PLAYER_VELOCITY_Y;
+
+    if movement + jump.0 >= MAX_JUMP_HEIGHT {
+        movement = MAX_JUMP_HEIGHT - jump.0;
+        commands.entity(entity).remove::<Jump>();
+    }
+
+    jump.0 += movement;
+
+    match player.translation {
+        Some(vec) => player.translation = Some(Vec2::new(vec.x, movement)),
+        None => player.translation = Some(Vec2::new(0.0, movement)),
+    }
+}
+
+fn update_fall(time: Res<Time>, mut query: Query<&mut KinematicCharacterController, Without<Jump>>) {
+    if query.is_empty() {
+        return;
+    }
+
+    let mut player = query.single_mut();
+    let movement = time.delta().as_secs_f32() * (PLAYER_VELOCITY_Y / 1.5) * -1.0;
+
+    match player.translation {
+        Some(vec) => player.translation = Some(Vec2::new(vec.x, movement)),
+        None => player.translation = Some(Vec2::new(0.0, movement)),
+    }
 }
 
 fn update_player_animation(
@@ -321,17 +389,17 @@ fn update_group(
         return;
     }
 
-    let (entity, mut player, output,velocity) = query.single_mut();
+    let (entity, mut player, output, velocity) = query.single_mut();
 
     if player.filter_groups.unwrap().memberships == Group::GROUP_5 {
         return;
     }
-    println!("{:?}",velocity.linvel);
+    // println!("{:?}", velocity.linvel);
     // if  output.collisions.len()>0{
-        
-    //     // println!("{:?}",output.collisions[0].character_translation);
+
+    // println!("{:?}",player.translation);
+    // println!("{:?}",output.collisions[0].character_translation);
     // }
-    
 
     let mut group = CollisionGroups::new(Group::GROUP_1, Group::ALL);
     if output.desired_translation.y < 0.0 {
@@ -348,7 +416,7 @@ fn update_group(
         group.memberships = group.memberships | Group::GROUP_4;
     }
 
-    println!("{:?}",group.memberships);
+    // println!("{:?}", group.memberships);
 
     player.filter_groups = Some(group);
 }
@@ -380,6 +448,17 @@ fn update_flip(mut query: Query<(&mut TextureAtlasSprite, &Direction)>) {
     match direction {
         Direction::Right => sprite.flip_x = true,
         Direction::Left => sprite.flip_x = false,
+    }
+}
+
+fn update_print(mut query: Query<&mut KinematicCharacterController>) {
+    if query.is_empty() {
+        return;
+    }
+
+    let player = query.single_mut();
+    if player.translation != None {
+        println!("{:?}", player.translation);
     }
 }
 
