@@ -202,9 +202,9 @@ pub fn update_input(
 
     let mut translation = Vec2::new(0.0, 0.0);
 
-    if player.translation != None {
-        println!("{:?}", player.translation);
-    }
+    // if player.translation != None {
+    //     println!("{:?}", player.translation);
+    // }
 
     if input.pressed(KeyCode::Right) {
         translation.x += time.delta_seconds() * 300.0;
@@ -314,17 +314,25 @@ fn update_group(
         Entity,
         &mut KinematicCharacterController,
         &mut KinematicCharacterControllerOutput,
+        &mut Velocity,
     )>,
 ) {
     if query.is_empty() {
         return;
     }
 
-    let (entity, mut player, output) = query.single_mut();
+    let (entity, mut player, output,velocity) = query.single_mut();
 
     if player.filter_groups.unwrap().memberships == Group::GROUP_5 {
         return;
     }
+    println!("{:?}",velocity.linvel);
+    // if  output.collisions.len()>0{
+        
+    //     // println!("{:?}",output.collisions[0].character_translation);
+    // }
+    
+
     let mut group = CollisionGroups::new(Group::GROUP_1, Group::ALL);
     if output.desired_translation.y < 0.0 {
         group.memberships = Group::GROUP_1;

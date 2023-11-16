@@ -250,8 +250,7 @@ fn setup(
                     ),
                 ),
                 RigidBody::Fixed,
-                // ActiveHooks::FILTER_CONTACT_PAIRS,
-            )); //摩擦力
+            )); 
         }
         //地图左边墙壁
         commands.spawn((Collider::segment(

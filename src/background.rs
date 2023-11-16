@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
+use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::utils::{cal_ax, cal_ay};
 
@@ -33,8 +33,8 @@ fn background(
 ) {
     let transform = q_transform.get_single_mut().ok().unwrap().0;
     let window = q_window.get_single_mut().ok().unwrap();
-    // println!("{:?}", window);
-    // println!("{:?}", time.delta_seconds());
+
+    
     for backenity in q_backenity.iter_mut() {
         commands.entity(backenity).despawn();
     }

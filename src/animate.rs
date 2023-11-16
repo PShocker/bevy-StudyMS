@@ -52,7 +52,7 @@ fn animate_player(
         With<Player>,
     >,
     time: Res<Time>,
-    mut state_change_ev: EventReader<StateChangeEvent>,
+    state_change_ev: EventReader<StateChangeEvent>,
 ) {
     for (entity, mut animation, mut sprite) in &mut q_player {
         // println!("{:?}",animation.name);
