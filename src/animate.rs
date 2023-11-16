@@ -1,7 +1,7 @@
-use bevy::{prelude::*, render::mesh::Indices};
+use bevy::prelude::*;
 use bevy::time::Time;
 
-use crate::player::{Player, PlayerState, StateChangeEvent};
+use crate::player::{Player, StateChangeEvent};
 
 #[derive(Component, Clone, Default, Debug)]
 pub struct AnimationTimer(pub Timer);
@@ -30,8 +30,18 @@ pub struct Animations {
     pub lastsprite: Option<Entity>,
 }
 
+pub struct AnimatePlugin;
+
+impl Plugin for AnimatePlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update,animate_player);
+        app.add_systems(Update,animate_back);
+    }
+}
+
+
 //播放人物行走动画
-pub fn animate_player(
+fn animate_player(
     mut commands: Commands,
     mut q_player: Query<
         (
@@ -62,7 +72,7 @@ pub fn animate_player(
 }
 
 //背景动画,背景obj的动画效果
-pub fn animate_back(time: Res<Time>, mut commands: Commands, mut query: Query<&mut Animations>) {
+fn animate_back(time: Res<Time>, mut commands: Commands, mut query: Query<&mut Animations>) {
     // println!("{:?}", time.raw_elapsed_seconds());
 
     for mut s in &mut query {

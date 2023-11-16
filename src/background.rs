@@ -13,8 +13,16 @@ pub struct BackGroundEdge {
     pub right: f32,
 }
 
+pub struct BackGroundPlugin;
+
+impl Plugin for BackGroundPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update,background);
+    }
+}
+
 //绘制背景,且背景随人物移动
-pub fn background(
+fn background(
     time: Res<Time>,
     mut commands: Commands,
     mut q_backgroud: Query<&mut BackGround>,

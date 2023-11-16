@@ -1,7 +1,7 @@
 //! Displays a single [`Sprite`], created from an image.
 
-use animate::{animate_back, animate_player, Animations};
-use background::{background, BackGround, BackGroundEdge};
+use animate::{Animations, AnimatePlugin};
+use background::{BackGround, BackGroundEdge, BackGroundPlugin};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
@@ -21,14 +21,6 @@ mod foothold;
 mod player;
 mod utils;
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, States)]
-enum AppState {
-    #[default]
-    Setup,
-    SetupFinished,
-    TextFinished,
-    PlayerFinished,
-}
 
 fn main() {
     App::new()
@@ -44,21 +36,18 @@ fn main() {
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
             RapierDebugRenderPlugin::default(), //显示碰撞线
         ))
-        .add_state::<AppState>()
-        .add_plugins(PlayerPlugin)
+        .add_plugins(PlayerPlugin)//人物
+        .add_plugins(CameraPlugin)//镜头跟随
+        .add_plugins(AnimatePlugin)//动画
+        .add_plugins(BackGroundPlugin)//生成背景
         .add_systems(Startup, setup) //初始化
-        .add_systems(Update, animate_back) //背景动画
-        .add_systems(Update, camera_follow) //镜头跟随
         //人物行走输入事件和人物方向
-        .add_systems(Update, background) //背景跟随
-        .add_systems(Update, animate_player) //播放人物动画
         .run();
 }
 
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    mut next_state: ResMut<NextState<AppState>>,
 ) {
     //读取地图json,json文件参考 https://github.com/Kagamia/MapRenderWeb.git
     //参考https://www.bilibili.com/video/BV1ou4y1o7XZ/
@@ -275,5 +264,4 @@ fn setup(
             Vec2::new(right as f32, 10000.0),
         ),));
     }
-    next_state.set(AppState::SetupFinished);
 }

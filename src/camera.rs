@@ -1,7 +1,7 @@
 use bevy::{prelude::*, window::PrimaryWindow};
 
 use crate::{
-    background::{self, BackGroundEdge},
+    background::BackGroundEdge,
     player::Player,
 };
 
@@ -10,8 +10,17 @@ const CAMERA_MIN_MOVE_DISTANCE: f32 = 0.1;
 // 每帧逼近剩余距离的百分比
 const CAMERA_MOVE_INTERPOLATE: f32 = 0.05;
 
+
+pub struct CameraPlugin;
+
+impl Plugin for CameraPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update,camera_follow);
+    }
+}
+
 // 相机跟随角色
-pub fn camera_follow(
+fn camera_follow(
     mut q_camera: Query<&mut Transform, (With<Camera>, Without<Player>)>,
     q_player: Query<&Transform, With<Player>>,
     mut q_window: Query<&Window, With<PrimaryWindow>>,
