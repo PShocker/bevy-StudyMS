@@ -37,12 +37,8 @@ pub enum PlayerState {
     Prone,
 }
 
-// 角色是否在地面上
-#[derive(Debug, Default, Resource, Reflect)]
-#[reflect(Resource)]
-pub struct PlayerGrounded {
-    pub flag: bool,
-}
+#[derive(Component, Clone, Default, Debug)]
+pub struct DownJumpTimer(pub Timer);
 
 #[derive(Clone, Default, Bundle)]
 pub struct PlayerBundle {
@@ -87,10 +83,12 @@ impl Plugin for PlayerPlugin {
                     update_flip,
                     update_player_animation,
                     update_group,
+                    update_downjump,
                     update_input,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
-            ).add_event::<StateChangeEvent>();
+            )
+            .add_event::<StateChangeEvent>();
     }
 }
 
@@ -204,10 +202,9 @@ pub fn update_input(
 
     let mut translation = Vec2::new(0.0, 0.0);
 
-    if  player.translation!=None{
-        println!("{:?}",player.translation); 
+    if player.translation != None {
+        println!("{:?}", player.translation);
     }
-    
 
     if input.pressed(KeyCode::Right) {
         translation.x += time.delta_seconds() * 200.0;
@@ -219,8 +216,9 @@ pub fn update_input(
 
     if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
         //下跳
-        // player.filter_flags=QueryFilterFlags::ONLY_DYNAMIC;
-        player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_5));
+        let timer = DownJumpTimer(Timer::from_seconds(0.2, TimerMode::Once));
+        player.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
+        commands.entity(enity).insert(timer);
         // println!("xiatiao");
     } else if input.pressed(KeyCode::AltLeft) {
         translation.y += time.delta().as_secs_f32() * (300.0 / 1.5) * 1.0;
@@ -228,7 +226,7 @@ pub fn update_input(
 
     //重力
     // if !output.grounded {
-        translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
+    translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
     // }
 
     player.translation = Some(translation);
@@ -243,7 +241,6 @@ fn update_player_animation(
     >,
     assets: ResMut<AnimateAssets>,
     mut state_change_ev: EventWriter<StateChangeEvent>,
-
 ) {
     if query.is_empty() {
         return;
@@ -265,16 +262,14 @@ fn update_player_animation(
                 commands
                     .entity(player)
                     .insert(assets.animate_map.get("prone").unwrap().clone());
-            state_change_ev.send_default();
-
+                state_change_ev.send_default();
             }
         } else {
             if animation.name != "stand" {
                 commands
                     .entity(player)
                     .insert(assets.animate_map.get("stand").unwrap().clone());
-            state_change_ev.send_default();
-
+                state_change_ev.send_default();
             }
         }
     } else if !output.grounded {
@@ -290,39 +285,64 @@ fn update_player_animation(
     // println!("{:?}", animation);
 }
 
-fn update_group(mut commands: Commands,mut query: Query<(
-    &mut KinematicCharacterController,
-    &mut KinematicCharacterControllerOutput,
-)>,) {
+//处理下跳
+fn update_downjump(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut query: Query<
+        (
+            Entity,
+            &mut DownJumpTimer,
+            &mut KinematicCharacterController,
+        ),
+        With<Player>,
+    >,
+) {
     if query.is_empty() {
         return;
     }
-    
-    let (mut player, output) = query.single_mut();
-    // println!("{:?}",output.desired_translation.y);
-    if player.filter_groups.unwrap().filters== Group::GROUP_5 && output.desired_translation.y> -4.0{
+    let (entity, mut timer, mut player) = query.single_mut();
+    if timer.0.tick(time.delta()).just_finished() {
+        player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
+        commands.entity(entity).remove::<DownJumpTimer>();
+    }
+}
+
+fn update_group(
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &mut KinematicCharacterController,
+        &mut KinematicCharacterControllerOutput,
+    )>,
+) {
+    if query.is_empty() {
         return;
     }
-    let mut group=CollisionGroups::new(Group::GROUP_1, Group::ALL);
-    if  output.desired_translation.y<0.0{
-        group.memberships=Group::GROUP_1;
+
+    let (entity, mut player, output) = query.single_mut();
+
+    if player.filter_groups.unwrap().memberships == Group::GROUP_5 {
+        return;
     }
-    if  output.desired_translation.y>0.0{
-        group.memberships=Group::GROUP_2;
+    let mut group = CollisionGroups::new(Group::GROUP_1, Group::ALL);
+    if output.desired_translation.y < 0.0 {
+        group.memberships = Group::GROUP_1;
     }
-    
-    if  output.desired_translation.x>=0.0{
-        group.memberships=group.memberships|Group::GROUP_3;
+    if output.desired_translation.y > 0.0 {
+        group.memberships = Group::GROUP_2;
     }
-    if  output.desired_translation.x<=0.0{
-        group.memberships=group.memberships|Group::GROUP_4;
+
+    if output.desired_translation.x >= 0.0 {
+        group.memberships = group.memberships | Group::GROUP_3;
     }
-    
-    
+    if output.desired_translation.x <= 0.0 {
+        group.memberships = group.memberships | Group::GROUP_4;
+    }
+
     // println!("{:?}",group.memberships);
 
-    player.filter_groups=Some(group);
-
+    player.filter_groups = Some(group);
 }
 
 fn update_direction(

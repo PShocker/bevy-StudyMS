@@ -268,12 +268,7 @@ fn setup(
         commands.spawn((Collider::segment(
             Vec2::new(left as f32, -10000.0),
             Vec2::new(left as f32, 10000.0),
-        ),
-        CollisionGroups::new(
-            Group::GROUP_3,
-            Group::GROUP_2,
-        ),
-    ));
+        ),));
         //地图右边墙壁
         commands.spawn((Collider::segment(
             Vec2::new(right as f32, -10000.0),
