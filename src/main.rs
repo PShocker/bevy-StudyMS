@@ -125,7 +125,7 @@ fn setup(
                             .push(frames["Delay"].as_i64().unwrap() as f32);
                     }
                     //产生组件,animate_back处理动画效果
-                    commands.spawn(animationsprite);
+                    // commands.spawn(animationsprite);
                     // commands.
                 }
             }
@@ -159,19 +159,19 @@ fn setup(
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                commands.spawn(SpriteBundle {
-                    texture: asset_server.load(
-                        tiles["Resource"]["ResourceUrl"]
-                            .to_string()
-                            .replace("\"", ""),
-                    ),
-                    transform: Transform::from_xyz(x, y, z),
-                    sprite: Sprite {
-                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                        ..default()
-                    },
-                    ..default()
-                });
+                // commands.spawn(SpriteBundle {
+                //     texture: asset_server.load(
+                //         tiles["Resource"]["ResourceUrl"]ssssssss
+                //             .to_string()
+                //             .replace("\"", ""),
+                //     ),
+                //     transform: Transform::from_xyz(x, y, z),
+                //     sprite: Sprite {
+                //         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                //         ..default()
+                //     },
+                //     ..default()
+                // });
             }
         }
     }
@@ -199,7 +199,7 @@ fn setup(
                     let background = BackGround::new(
                         id, x, y, cx, cy, rx, ry, alpha, flip_x, front, ani, types, resource,
                     );
-                    commands.spawn(background);
+                    // commands.spawn(background);
                 }
                 1 => {}
                 _ => println!("Ani Other"),
@@ -254,7 +254,7 @@ fn setup(
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
                 CollisionGroups::new(
-                    Group::GROUP_1,
+                    Group::ALL,
                     get_foothold_group(
                         Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                         Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
@@ -268,15 +268,16 @@ fn setup(
         commands.spawn((Collider::segment(
             Vec2::new(left as f32, -10000.0),
             Vec2::new(left as f32, 10000.0),
-        ),));
+        ),
+        CollisionGroups::new(
+            Group::GROUP_3,
+            Group::GROUP_2,
+        ),
+    ));
         //地图右边墙壁
         commands.spawn((Collider::segment(
             Vec2::new(right as f32, -10000.0),
             Vec2::new(right as f32, 10000.0),
-        ),
-        CollisionGroups::new(
-            Group::GROUP_1,
-            Group::GROUP_4|Group::GROUP_1|Group::GROUP_5,
         ),));
     }
     next_state.set(AppState::SetupFinished);

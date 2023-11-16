@@ -160,8 +160,8 @@ fn player(
                 anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                 ..default()
             },
-            texture_atlas: texture_atlas_handle.clone(),
-            transform: Transform::from_xyz(0.0, 0.0, 100.0),
+            // texture_atlas: texture_atlas_handle.clone(),
+            transform: Transform::from_xyz(0.0, -500.0, 100.0),
             ..default()
         },
         animation: animate_map.get("walk").unwrap().clone(),
@@ -176,7 +176,7 @@ fn player(
         sleep: Sleeping::disabled(),
         controller: KinematicCharacterController {
             translation: Some(Vec2::new(0.0, 0.0)),
-            filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_1)),
+            filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
             ..default()
         },
     },));
@@ -223,12 +223,12 @@ pub fn update_input(
         player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::GROUP_5));
         // println!("xiatiao");
     } else if input.pressed(KeyCode::AltLeft) {
-        translation.y += time.delta().as_secs_f32() * (700.0 / 1.5) * 1.0;
+        translation.y += time.delta().as_secs_f32() * (300.0 / 1.5) * 1.0;
     }
 
     //重力
     // if !output.grounded {
-        translation.y += time.delta().as_secs_f32() * (350.0 / 1.5) * -1.0;
+        translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
     // }
 
     player.translation = Some(translation);
@@ -303,21 +303,23 @@ fn update_group(mut commands: Commands,mut query: Query<(
     if player.filter_groups.unwrap().filters== Group::GROUP_5 && output.desired_translation.y> -4.0{
         return;
     }
-    let mut group=CollisionGroups::new(Group::GROUP_1, Group::GROUP_1);
+    let mut group=CollisionGroups::new(Group::GROUP_1, Group::ALL);
     if  output.desired_translation.y<0.0{
-        group.filters=Group::GROUP_1;
+        group.memberships=Group::GROUP_1;
     }
     if  output.desired_translation.y>0.0{
-        group.filters=Group::GROUP_2;
-    }
-    if  output.desired_translation.x>0.0{
-        group.filters=group.filters|Group::GROUP_4;
-    }
-    if  output.desired_translation.x<0.0{
-        group.filters=group.filters|Group::GROUP_4;
+        group.memberships=Group::GROUP_2;
     }
     
-    println!("{:?}",group.filters);
+    if  output.desired_translation.x>=0.0{
+        group.memberships=group.memberships|Group::GROUP_3;
+    }
+    if  output.desired_translation.x<=0.0{
+        group.memberships=group.memberships|Group::GROUP_4;
+    }
+    
+    
+    // println!("{:?}",group.memberships);
 
     player.filter_groups=Some(group);
 
