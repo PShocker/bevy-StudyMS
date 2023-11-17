@@ -171,7 +171,7 @@ fn player(
                     anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                // texture_atlas: texture_atlas_handle.clone(),
+                texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
@@ -189,7 +189,7 @@ fn player(
                 ..default()
             },
         },
-        // GravityScale(7.0),
+        GravityScale(7.0),
     ));
     commands.insert_resource(AnimateAssets {
         animate_map: animate_map,
