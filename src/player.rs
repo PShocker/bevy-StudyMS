@@ -213,9 +213,7 @@ fn update_walk(
 
     if input.pressed(KeyCode::Right) {
         movement = time.delta_seconds() * PLAYER_VELOCITY_X;
-    }
-
-    if input.pressed(KeyCode::Left) {
+    }else if input.pressed(KeyCode::Left) {
         movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
     }
 
