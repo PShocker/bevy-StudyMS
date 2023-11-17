@@ -94,7 +94,6 @@ impl Plugin for PlayerPlugin {
                     update_group,
                     update_downjump,
                     update_walk,
-                    update_jump,
                     update_rise,
                     update_fall,
                     // update_print,
@@ -201,67 +200,39 @@ fn player(
 fn update_walk(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
-    commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut Player,
-        &mut KinematicCharacterController,
-    )>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController)>,
 ) {
     if query.is_empty() {
         return;
     }
 
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
-    let (mut enity, mut player, mut controller) = query.single_mut();
-        let mut movement = 0.0;
+    let (entity, mut player, mut controller) = query.single_mut();
+    let mut movement = 0.0;
 
-        if input.pressed(KeyCode::Right) {
-            movement = time.delta_seconds() * PLAYER_VELOCITY_X;
-        }
+    if input.pressed(KeyCode::Right) {
+        movement = time.delta_seconds() * PLAYER_VELOCITY_X;
+    }
 
-        if input.pressed(KeyCode::Left) {
-            movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
-        }
+    if input.pressed(KeyCode::Left) {
+        movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
+    }
 
-        // if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-        //     //下跳
-        //     player.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
-        //     commands
-        //         .entity(enity)
-        //         .insert(DownJumpTimer(Timer::from_seconds(0.1, TimerMode::Once)));
-        // } else if input.pressed(KeyCode::AltLeft) {
-        //     translation.y += time.delta().as_secs_f32() * (300.0 / 1.5) * 1.0;
-        // }
-
-        // //重力
-        // // if !output.grounded {
-        // translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
-        // // }
-        // match controller.translation {
-        //     Some(vec) => controller.translation = Some(Vec2::new(movement, vec.y)),
-        //     None => controller.translation = Some(Vec2::new(movement, 0.0)),
-        // }
+    if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+        //下跳
+        commands
+            .entity(entity)
+            .insert(DownJumpTimer(Timer::from_seconds(0.1, TimerMode::Once)));
+    } else if input.pressed(KeyCode::AltLeft) {
+        //跳跃
+        commands.entity(entity).insert(Jump(0.0, 1.0));
         player.linvel = Vec2::new(movement, 0.0);
     }
 
-fn update_jump(
-    input: Res<Input<KeyCode>>,
-    mut commands: Commands,
-    mut query: Query<
-        (Entity, &mut Velocity, &KinematicCharacterControllerOutput),
-        (With<KinematicCharacterController>, Without<Jump>),
-    >,
-) {
-    if query.is_empty() {
-        return;
-    }
-
-    let (player, mut velocity, output) = query.single_mut();
-
-    if input.pressed(KeyCode::AltLeft) && output.grounded {
-        commands.entity(player).insert(Jump(0.0, 1.0));
-        // velocity.linvel.y = 400.0;
+    match controller.translation {
+        Some(vec) => controller.translation = Some(Vec2::new(movement, vec.y)),
+        None => controller.translation = Some(Vec2::new(movement, 0.0)),
     }
 }
 
@@ -291,10 +262,10 @@ fn update_rise(
     jump.0 += movement;
     jump.1 *= 0.9;
 
-    // match controller.translation {
-    //     Some(vec) => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
-    //     None => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
-    // }
+    match controller.translation {
+        Some(vec) => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
+        None => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
+    }
 }
 
 fn update_fall(
