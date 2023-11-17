@@ -70,9 +70,9 @@ enum Load {
 struct Jump(f32, f32);
 
 const PLAYER_VELOCITY_X: f32 = 200.0;
-const PLAYER_VELOCITY_Y: f32 = 600.0;
+const PLAYER_VELOCITY_Y: f32 = 80.0;
 
-const MAX_JUMP_HEIGHT: f32 = 80.0;
+const MAX_JUMP_HEIGHT: f32 = 200.0;
 
 pub struct PlayerPlugin;
 
