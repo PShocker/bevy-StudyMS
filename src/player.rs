@@ -7,7 +7,9 @@ use bevy_rapier2d::prelude::*;
 pub struct StateChangeEvent;
 
 #[derive(Debug, Component, Clone, Copy, Default)]
-pub struct Player;
+pub struct Player {
+    pub linvel: Vect,
+}
 
 #[derive(Debug, Resource)]
 pub struct PlayerAssets {
@@ -51,7 +53,6 @@ pub struct PlayerBundle {
     pub restitution: Restitution,
     pub rotation_constraints: LockedAxes,
     pub velocity: Velocity,
-    pub state: PlayerState,
     pub sleep: Sleeping,
     pub controller: KinematicCharacterController,
 }
@@ -65,10 +66,13 @@ enum Load {
     PlayerFinished,
 }
 
-const PLAYER_VELOCITY_X: f32 = 200.0;
-const PLAYER_VELOCITY_Y: f32 = 290.0;
+#[derive(Component)]
+struct Jump(f32, f32);
 
-const MAX_JUMP_HEIGHT: f32 = 90.0;
+const PLAYER_VELOCITY_X: f32 = 200.0;
+const PLAYER_VELOCITY_Y: f32 = 600.0;
+
+const MAX_JUMP_HEIGHT: f32 = 80.0;
 
 pub struct PlayerPlugin;
 
@@ -160,92 +164,92 @@ fn player(
     }
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    commands.spawn((PlayerBundle {
-        sprite_bundle: SpriteSheetBundle {
-            sprite: TextureAtlasSprite {
-                index: 0,
-                anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
+    commands.spawn((
+        PlayerBundle {
+            sprite_bundle: SpriteSheetBundle {
+                sprite: TextureAtlasSprite {
+                    index: 0,
+                    anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
+                    ..default()
+                },
+                // texture_atlas: texture_atlas_handle.clone(),
+                transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
-            texture_atlas: texture_atlas_handle.clone(),
-            transform: Transform::from_xyz(0.0, -500.0, 100.0),
-            ..default()
+            animation: animate_map.get("walk").unwrap().clone(),
+            rigid_body: RigidBody::KinematicPositionBased,
+            rotation_constraints: LockedAxes::ROTATION_LOCKED,
+            collider: Collider::cuboid(9.0, 4.0),
+            velocity: Velocity::zero(),
+            restitution: Restitution::new(0.0),
+            player: Player { linvel: Vect::ZERO },
+            direction: Direction::Right,
+            sleep: Sleeping::disabled(),
+            controller: KinematicCharacterController {
+                filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
+                ..default()
+            },
         },
-        animation: animate_map.get("walk").unwrap().clone(),
-        rigid_body: RigidBody::KinematicPositionBased,
-        rotation_constraints: LockedAxes::ROTATION_LOCKED,
-        collider: Collider::cuboid(9.0, 4.0),
-        velocity: Velocity::zero(),
-        restitution: Restitution::new(0.0),
-        player: Player,
-        direction: Direction::Right,
-        state: PlayerState::Standing,
-        sleep: Sleeping::disabled(),
-        controller: KinematicCharacterController {
-            filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
-            ..default()
-        },
-    },));
+        // GravityScale(7.0),
+    ));
     commands.insert_resource(AnimateAssets {
         animate_map: animate_map,
     });
     next_state.set(Load::PlayerFinished);
 }
 
-pub fn update_walk(
+fn update_walk(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut KinematicCharacterController)>,
+    commands: Commands,
+    mut query: Query<(
+        Entity,
+        &mut Player,
+        &mut KinematicCharacterController,
+    )>,
 ) {
     if query.is_empty() {
         return;
     }
 
-    let (mut enity, mut player) = query.single_mut();
+    // let (mut enity, mut player, mut controller, output) = query.single_mut();
+    let (mut enity, mut player, mut controller) = query.single_mut();
+        let mut movement = 0.0;
 
-    let mut movement=0.0;
+        if input.pressed(KeyCode::Right) {
+            movement = time.delta_seconds() * PLAYER_VELOCITY_X;
+        }
 
-    // if player.translation != None {
-    //     println!("{:?}", player.translation);
-    // }
+        if input.pressed(KeyCode::Left) {
+            movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
+        }
 
-    if input.pressed(KeyCode::Right) {
-        movement = time.delta_seconds() * PLAYER_VELOCITY_X;
+        // if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+        //     //下跳
+        //     player.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
+        //     commands
+        //         .entity(enity)
+        //         .insert(DownJumpTimer(Timer::from_seconds(0.1, TimerMode::Once)));
+        // } else if input.pressed(KeyCode::AltLeft) {
+        //     translation.y += time.delta().as_secs_f32() * (300.0 / 1.5) * 1.0;
+        // }
+
+        // //重力
+        // // if !output.grounded {
+        // translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
+        // // }
+        // match controller.translation {
+        //     Some(vec) => controller.translation = Some(Vec2::new(movement, vec.y)),
+        //     None => controller.translation = Some(Vec2::new(movement, 0.0)),
+        // }
+        player.linvel = Vec2::new(movement, 0.0);
     }
-
-    if input.pressed(KeyCode::Left) {
-        movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
-    }
-
-    // if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-    //     //下跳
-    //     player.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
-    //     commands
-    //         .entity(enity)
-    //         .insert(DownJumpTimer(Timer::from_seconds(0.1, TimerMode::Once)));
-    // } else if input.pressed(KeyCode::AltLeft) {
-    //     translation.y += time.delta().as_secs_f32() * (300.0 / 1.5) * 1.0;
-    // }
-
-    // //重力
-    // // if !output.grounded {
-    // translation.y += time.delta().as_secs_f32() * (150.0 / 1.5) * -1.0;
-    // // }
-    match player.translation {
-        Some(vec) => player.translation = Some(Vec2::new(movement, vec.y)),
-        None => player.translation = Some(Vec2::new(movement, 0.0)),
-    }
-}
-
-#[derive(Component)]
-struct Jump(f32);
 
 fn update_jump(
     input: Res<Input<KeyCode>>,
     mut commands: Commands,
-    query: Query<
-        (Entity, &KinematicCharacterControllerOutput),
+    mut query: Query<
+        (Entity, &mut Velocity, &KinematicCharacterControllerOutput),
         (With<KinematicCharacterController>, Without<Jump>),
     >,
 ) {
@@ -253,25 +257,31 @@ fn update_jump(
         return;
     }
 
-    let (player, output) = query.single();
+    let (player, mut velocity, output) = query.single_mut();
 
-    if input.pressed(KeyCode::AltLeft) {
-        commands.entity(player).insert(Jump(0.0));
+    if input.pressed(KeyCode::AltLeft) && output.grounded {
+        commands.entity(player).insert(Jump(0.0, 1.0));
+        // velocity.linvel.y = 400.0;
     }
 }
 
 fn update_rise(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut KinematicCharacterController, &mut Jump)>,
+    mut query: Query<(
+        Entity,
+        &mut Player,
+        &mut KinematicCharacterController,
+        &mut Jump,
+    )>,
 ) {
     if query.is_empty() {
         return;
     }
 
-    let (entity, mut player, mut jump) = query.single_mut();
+    let (entity, mut player, mut controller, mut jump) = query.single_mut();
 
-    let mut movement = time.delta().as_secs_f32() * PLAYER_VELOCITY_Y;
+    let mut movement = time.delta().as_secs_f32() * PLAYER_VELOCITY_Y * jump.1;
 
     if movement + jump.0 >= MAX_JUMP_HEIGHT {
         movement = MAX_JUMP_HEIGHT - jump.0;
@@ -279,24 +289,36 @@ fn update_rise(
     }
 
     jump.0 += movement;
+    jump.1 *= 0.9;
 
-    match player.translation {
-        Some(vec) => player.translation = Some(Vec2::new(vec.x, movement)),
-        None => player.translation = Some(Vec2::new(0.0, movement)),
-    }
+    // match controller.translation {
+    //     Some(vec) => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
+    //     None => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
+    // }
 }
 
-fn update_fall(time: Res<Time>, mut query: Query<&mut KinematicCharacterController, Without<Jump>>) {
+fn update_fall(
+    time: Res<Time>,
+    mut query: Query<
+        (
+            &mut Player,
+            &mut KinematicCharacterController,
+            // &mut KinematicCharacterControllerOutput,
+        ),
+        Without<Jump>,
+    >,
+) {
     if query.is_empty() {
         return;
     }
+    let (mut player, mut controller) = query.single_mut();
 
-    let mut player = query.single_mut();
+    // velocity.linvel=Vec2::new(0.0,-100.0);
     let movement = time.delta().as_secs_f32() * (PLAYER_VELOCITY_Y / 1.5) * -1.0;
 
-    match player.translation {
-        Some(vec) => player.translation = Some(Vec2::new(vec.x, movement)),
-        None => player.translation = Some(Vec2::new(0.0, movement)),
+    match controller.translation {
+        Some(vec) => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
+        None => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
     }
 }
 
@@ -458,7 +480,7 @@ fn update_print(mut query: Query<&mut KinematicCharacterController>) {
 
     let player = query.single_mut();
     if player.translation != None {
-        println!("{:?}", player.translation);
+        // println!("{:?}", player.translation);
     }
 }
 
