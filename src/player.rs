@@ -1,6 +1,6 @@
 use crate::animate::{Animation, AnimationIndices, AnimationTimer};
 use bevy::{asset::LoadState, prelude::*, utils::HashMap};
-use bevy_rapier2d::prelude::*;
+use bevy_rapier2d::{na::ComplexField, prelude::*};
 
 // 人物状态切换
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Event)]
@@ -9,6 +9,7 @@ pub struct StateChangeEvent;
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct Player {
     pub linvel: Vect,
+    pub grounded: bool,
 }
 
 #[derive(Debug, Resource)]
@@ -69,7 +70,7 @@ enum Load {
 #[derive(Component)]
 struct Jump(f32, f32);
 
-const PLAYER_VELOCITY_X: f32 = 200.0;
+const PLAYER_VELOCITY_X: f32 = 300.0;
 const PLAYER_VELOCITY_Y: f32 = 240.0;
 
 const MAX_JUMP_HEIGHT: f32 = 300.0;
@@ -89,15 +90,16 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     update_flip,
-                    update_player_animation,
                     // update_group,
                     update_downjump,
                     update_walk,
-                    update_rise,
-                    // update_print,
+                    update_jump,
+                    update_direction,
+                    player_grounded_detect,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
             )
+            .add_systems(Last, update_player_animation.run_if(in_state(Load::PlayerFinished)),)
             .add_event::<StateChangeEvent>();
     }
 }
@@ -166,7 +168,7 @@ fn player(
             sprite_bundle: SpriteSheetBundle {
                 sprite: TextureAtlasSprite {
                     index: 0,
-                    anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
+                    // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
                 texture_atlas: texture_atlas_handle.clone(),
@@ -174,20 +176,28 @@ fn player(
                 ..default()
             },
             animation: animate_map.get("walk").unwrap().clone(),
-            rigid_body: RigidBody::KinematicPositionBased,
+            rigid_body: RigidBody::Dynamic,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
-            collider: Collider::cuboid(9.0, 4.0),
+            collider: Collider::cuboid(16.0, 32.0),
+            // collider: Collider::capsule_y(18.0, 16.0),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
-            player: Player { linvel: Vect::ZERO },
+            player: Player {
+                linvel: Vect::ZERO,
+                grounded: false,
+            },
             direction: Direction::Right,
             sleep: Sleeping::disabled(),
             controller: KinematicCharacterController {
+                offset: CharacterLength::Absolute(0.1),
                 filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
+                snap_to_ground: Some(CharacterLength::Absolute(1.0)),
                 ..default()
             },
         },
-        GravityScale(7.0),
+        GravityScale(18.0),
+        ActiveEvents::CONTACT_FORCE_EVENTS,
+        Friction::coefficient(1.0),
     ));
     commands.insert_resource(AnimateAssets {
         animate_map: animate_map,
@@ -195,96 +205,76 @@ fn player(
     next_state.set(Load::PlayerFinished);
 }
 
+fn update_jump(
+    input: Res<Input<KeyCode>>,
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &mut Player,
+        &mut Velocity,
+        &mut KinematicCharacterController,
+    )>,
+) {
+    let (entity, player, mut velocity, mut controller) = query.single_mut();
+    if player.grounded {
+        if input.pressed(KeyCode::AltLeft) {
+            if input.pressed(KeyCode::Right) {
+                velocity.linvel.x = 200.0;
+            }
+            if input.pressed(KeyCode::Left) {
+                velocity.linvel.x = -200.0;
+            }
+            velocity.linvel.y = 600.0;
+            return;
+        }
+    }
+}
+
 fn update_walk(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut q_player: Query<(Entity, &mut Player, &mut KinematicCharacterController)>,
-    mut q_output: Query<&mut KinematicCharacterControllerOutput>,
-) {
-    let mut ground = false;
-    if q_player.is_empty() {
-        return;
-    }
-    if !q_output.is_empty() {
-        let output = q_output.single_mut();
-        ground = output.grounded;
-    }
-
-    // let (mut enity, mut player, mut controller, output) = query.single_mut();
-    let (entity, mut player, mut controller) = q_player.single_mut();
-
-    let mut x = 0.0;
-    let mut y = -0.01;
-
-    if ground {
-        //地面
-        println!("ground");
-
-        if input.pressed(KeyCode::Right) {
-            x = time.delta_seconds() * PLAYER_VELOCITY_X;
-            commands.entity(entity).insert(Direction::Right);
-        } else if input.pressed(KeyCode::Left) {
-            x = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
-            commands.entity(entity).insert(Direction::Left);
-        }
-
-        if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-            //下跳
-            commands
-                .entity(entity)
-                .insert(DownJumpTimer(Timer::from_seconds(0.1, TimerMode::Once)));
-        } else if input.pressed(KeyCode::AltLeft) {
-            //跳跃
-            commands.entity(entity).insert(Jump(0.0, 1.0));
-            player.linvel = Vec2::new(x, 0.0);
-        }
-    } else {
-        //空中
-        y = time.delta().as_secs_f32() * (PLAYER_VELOCITY_Y / 1.5) * -1.0;
-    }
-    println!("{:?}", y);
-    controller.translation = Some(Vec2::new(x, y))
-}
-
-fn update_rise(
-    mut commands: Commands,
-    time: Res<Time>,
     mut query: Query<(
         Entity,
         &mut Player,
+        &mut Velocity,
         &mut KinematicCharacterController,
-        &mut Jump,
     )>,
 ) {
     if query.is_empty() {
         return;
     }
-
-    let (entity, mut player, mut controller, mut jump) = query.single_mut();
-
-    let mut movement = time.delta().as_secs_f32() * PLAYER_VELOCITY_Y * jump.1;
-
-    if movement + jump.0 >= MAX_JUMP_HEIGHT {
-        movement = MAX_JUMP_HEIGHT - jump.0;
-        commands.entity(entity).remove::<Jump>();
+    // let (mut enity, mut player, mut controller, output) = query.single_mut();
+    let (entity, player, mut velocity, mut controller) = query.single_mut();
+    if player.grounded && !input.pressed(KeyCode::AltLeft) {
+        let mut movement = 0.0;
+        if input.pressed(KeyCode::Right) {
+            movement = time.delta_seconds() * PLAYER_VELOCITY_X;
+        } else if input.pressed(KeyCode::Left) {
+            movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
+        }
+        match controller.translation {
+            Some(vec) => controller.translation = Some(Vec2::new(movement, vec.y)),
+            None => controller.translation = Some(Vec2::new(movement, -10.0)),
+        }
     }
 
-    jump.0 += movement;
-    // jump.1 *= 0.9;
-
-    match controller.translation {
-        Some(vec) => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
-        None => controller.translation = Some(Vec2::new(player.linvel.x, movement)),
-    }
+    // player.translation = Some(translation);
 }
 
 fn update_player_animation(
     input: Res<Input<KeyCode>>,
     mut commands: Commands,
     mut query: Query<
-        (Entity, &KinematicCharacterControllerOutput, &mut Animation),
-        With<Animation>,
+        (
+            Entity,
+            &mut Animation,
+            &mut Velocity,
+            &mut KinematicCharacterControllerOutput,
+            &mut Player,
+        ),
+        With<Player>,
     >,
     assets: ResMut<AnimateAssets>,
     mut state_change_ev: EventWriter<StateChangeEvent>,
@@ -292,39 +282,41 @@ fn update_player_animation(
     if query.is_empty() {
         return;
     }
-    let (player, output, mut animation) = query.single_mut();
-    if output.desired_translation.x != 0.0 && output.grounded {
+    let (entity, mut animation, mut velocity, mut output, mut player) = query.single_mut();
+
+    if output.desired_translation.x.abs() > 0.0 && player.grounded {
         //walk状态
         if animation.name != "walk" {
             commands
-                .entity(player)
+                .entity(entity)
                 .insert(assets.animate_map.get("walk").unwrap().clone());
             state_change_ev.send_default();
         }
         // println!("walk");
-    } else if output.desired_translation.x == 0.0 && output.grounded {
+    } else if output.desired_translation.x.abs() < 1.0 && player.grounded {
         //stand状态或prone状态
         if input.pressed(KeyCode::Down) {
             if animation.name != "prone" {
                 commands
-                    .entity(player)
+                    .entity(entity)
                     .insert(assets.animate_map.get("prone").unwrap().clone());
                 state_change_ev.send_default();
             }
         } else {
             if animation.name != "stand" {
                 commands
-                    .entity(player)
+                    .entity(entity)
                     .insert(assets.animate_map.get("stand").unwrap().clone());
                 state_change_ev.send_default();
             }
         }
-    } else if !output.grounded {
+    } else if !player.grounded {
         //jump状态
         // *animation = assets.animate_map.get("jump").unwrap().clone();
+        // println!("{:?}", velocity.linvel);
         if animation.name != "jump" {
             commands
-                .entity(player)
+                .entity(entity)
                 .insert(assets.animate_map.get("jump").unwrap().clone());
             state_change_ev.send_default();
         }
@@ -421,6 +413,39 @@ fn update_print(mut query: Query<&mut KinematicCharacterController>) {
     let player = query.single_mut();
     if player.translation != None {
         // println!("{:?}", player.translation);
+    }
+}
+
+fn update_direction(
+    input: Res<Input<KeyCode>>,
+    mut commands: Commands,
+    query: Query<Entity, With<Player>>,
+) {
+    if query.is_empty() {
+        return;
+    }
+    let entity = query.single();
+    if input.pressed(KeyCode::Right) {
+        commands.entity(entity).insert(Direction::Right);
+    } else if input.pressed(KeyCode::Left) {
+        commands.entity(entity).insert(Direction::Left);
+    }
+}
+
+//通过碰撞检测人物是否在地面上
+pub fn player_grounded_detect(
+    mut contact_force_events: EventReader<ContactForceEvent>,
+    mut query: Query<(&mut Player, &mut GravityScale)>,
+) {
+    // for contact_force_event in contact_force_events.iter() {
+    //     println!("Received contact force event: {contact_force_event:?}");
+    // }
+    let (mut player, mut gravity) = query.single_mut();
+    if !contact_force_events.is_empty() {
+        player.grounded = true;
+        contact_force_events.clear();
+    } else {
+        player.grounded = false;
     }
 }
 
