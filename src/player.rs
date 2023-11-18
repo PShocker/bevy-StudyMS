@@ -87,6 +87,10 @@ impl Plugin for PlayerPlugin {
                 check_textures.run_if(in_state(Load::Loading)), //等待人物读取完成
             )
             .add_systems(
+                PreUpdate,
+                (player_grounded_detect,update_player_animation).run_if(in_state(Load::PlayerFinished)),
+            )
+            .add_systems(
                 Update,
                 (
                     update_flip,
@@ -95,11 +99,9 @@ impl Plugin for PlayerPlugin {
                     update_walk,
                     update_jump,
                     update_direction,
-                    player_grounded_detect,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
             )
-            .add_systems(Last, update_player_animation.run_if(in_state(Load::PlayerFinished)),)
             .add_event::<StateChangeEvent>();
     }
 }
@@ -220,10 +222,10 @@ fn update_jump(
     if player.grounded {
         if input.pressed(KeyCode::AltLeft) {
             if input.pressed(KeyCode::Right) {
-                velocity.linvel.x = 200.0;
+                velocity.linvel.x = 300.0;
             }
             if input.pressed(KeyCode::Left) {
-                velocity.linvel.x = -200.0;
+                velocity.linvel.x = -300.0;
             }
             velocity.linvel.y = 600.0;
             return;
