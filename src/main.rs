@@ -242,7 +242,7 @@ fn setup(
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
                 CollisionGroups::new(
-                    Group::ALL,
+                    Group::GROUP_1,
                     get_foothold_group(
                         Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                         Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
@@ -250,6 +250,7 @@ fn setup(
                 ),
                 RigidBody::Fixed,
                 Friction::coefficient(1.0),
+                Restitution::new(0.0),
                 ActiveEvents::CONTACT_FORCE_EVENTS,
             )); 
         }

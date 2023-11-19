@@ -70,7 +70,7 @@ enum Load {
 #[derive(Component)]
 struct Jump(f32, f32);
 
-const PLAYER_VELOCITY_X: f32 = 300.0;
+const PLAYER_VELOCITY_X: f32 = 200.0;
 const PLAYER_VELOCITY_Y: f32 = 240.0;
 
 const MAX_JUMP_HEIGHT: f32 = 300.0;
@@ -87,8 +87,12 @@ impl Plugin for PlayerPlugin {
                 check_textures.run_if(in_state(Load::Loading)), //等待人物读取完成
             )
             .add_systems(
+                FixedUpdate,
+                player_grounded_detect.run_if(in_state(Load::PlayerFinished)),
+            )
+            .add_systems(
                 PreUpdate,
-                (player_grounded_detect,update_player_animation).run_if(in_state(Load::PlayerFinished)),
+                update_player_animation.run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
                 Update,
@@ -197,7 +201,7 @@ fn player(
                 ..default()
             },
         },
-        GravityScale(18.0),
+        GravityScale(14.0),
         ActiveEvents::CONTACT_FORCE_EVENTS,
         Friction::coefficient(1.0),
     ));
@@ -220,15 +224,19 @@ fn update_jump(
 ) {
     let (entity, player, mut velocity, mut controller) = query.single_mut();
     if player.grounded {
-        if input.pressed(KeyCode::AltLeft) {
+        if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+            controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::GROUP_5));
+            commands
+                .entity(entity)
+                .insert(DownJumpTimer(Timer::from_seconds(10.0, TimerMode::Once)));
+        } else if input.pressed(KeyCode::AltLeft) {
             if input.pressed(KeyCode::Right) {
-                velocity.linvel.x = 300.0;
+                velocity.linvel.x = 200.0;
             }
             if input.pressed(KeyCode::Left) {
-                velocity.linvel.x = -300.0;
+                velocity.linvel.x = -200.0;
             }
-            velocity.linvel.y = 600.0;
-            return;
+            velocity.linvel.y = 400.0;
         }
     }
 }
@@ -258,7 +266,7 @@ fn update_walk(
         }
         match controller.translation {
             Some(vec) => controller.translation = Some(Vec2::new(movement, vec.y)),
-            None => controller.translation = Some(Vec2::new(movement, -10.0)),
+            None => controller.translation = Some(Vec2::new(movement, -100.0)),
         }
     }
 
@@ -285,7 +293,7 @@ fn update_player_animation(
         return;
     }
     let (entity, mut animation, mut velocity, mut output, mut player) = query.single_mut();
-
+    // println!("{}",velocity.linvel.x);
     if output.desired_translation.x.abs() > 0.0 && player.grounded {
         //walk状态
         if animation.name != "walk" {
@@ -312,10 +320,10 @@ fn update_player_animation(
                 state_change_ev.send_default();
             }
         }
-    } else if !player.grounded {
+    } else if velocity.linvel.y.abs()>=1.0{
         //jump状态
         // *animation = assets.animate_map.get("jump").unwrap().clone();
-        // println!("{:?}", velocity.linvel);
+        // println!("{:?},{:?}", velocity.linvel,output.desired_translation.y.abs());
         if animation.name != "jump" {
             commands
                 .entity(entity)
@@ -344,7 +352,7 @@ fn update_downjump(
     }
     let (entity, mut timer, mut player) = query.single_mut();
     if timer.0.tick(time.delta()).just_finished() {
-        player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
+        // player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
         commands.entity(entity).remove::<DownJumpTimer>();
     }
 }
