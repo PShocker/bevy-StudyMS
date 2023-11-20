@@ -73,12 +73,14 @@ struct Jump(f32, f32);
 const PLAYER_VELOCITY_X: f32 = 300.0;
 const GRAVITY: f32 = 10.0;
 
-const MAX_JUMP_HEIGHT: f32 = 300.0;
+const MAX_JUMP_HEIGHT: f32 = 5.8;
 
 #[derive(Debug, Component, Clone, Default)]
 pub struct Ground;
 #[derive(Debug, Component, Clone, Default)]
-pub struct Air;
+pub struct Rise;
+#[derive(Debug, Component, Clone, Default)]
+pub struct Fall;
 
 pub struct PlayerPlugin;
 
@@ -91,10 +93,10 @@ impl Plugin for PlayerPlugin {
                 Update,
                 check_textures.run_if(in_state(Load::Loading)), //等待人物读取完成
             )
-            // .add_systems(
-            //     PostUpdate,
-            //     update_groud.run_if(in_state(Load::PlayerFinished)),
-            // )
+            .add_systems(
+                PreUpdate,
+                update_groud.run_if(in_state(Load::PlayerFinished)),
+            )
             .add_systems(
                 PreUpdate,
                 update_player_animation.run_if(in_state(Load::PlayerFinished)),
@@ -104,9 +106,10 @@ impl Plugin for PlayerPlugin {
                 (
                     update_flip,
                     // update_group,
+                    update_fall,
                     update_downjump,
                     update_input,
-                    update_air,
+                    update_rise,
                     update_direction,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
@@ -194,7 +197,7 @@ fn player(
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
             player: Player {
-                translation: Vec2 { x: (0.0), y: (0.0) },
+                translation: Vect::ZERO,
                 grounded: false,
             },
             direction: Direction::Right,
@@ -209,7 +212,7 @@ fn player(
         GravityScale(14.0),
         ActiveEvents::CONTACT_FORCE_EVENTS,
         Friction::coefficient(1.0),
-        Air,
+        Fall,
     ));
     commands.insert_resource(AnimateAssets {
         animate_map: animate_map,
@@ -217,25 +220,26 @@ fn player(
     next_state.set(Load::PlayerFinished);
 }
 
-fn update_air(
+fn update_rise(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController,&mut KinematicCharacterControllerOutput), Without<Ground>>,
+    mut query: Query<(
+        Entity,
+        &mut Player,
+        &mut KinematicCharacterController,
+    ),With<Rise>>,
 ) {
     if query.is_empty() {
         return;
     }
-    let (entity, mut player, mut controller,mut output) = query.single_mut();
+    let (entity, mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
-    println!("{}", dt);
     player.translation.y -= GRAVITY * dt;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
-    if output.grounded {
-        commands.entity(entity).insert(Ground);
-        commands.entity(entity).remove::<Air>();
-    } else {
-        commands.entity(entity).remove::<Ground>();
+    if  player.translation.y<=0.0{
+        commands.entity(entity).insert(Fall);
+        commands.entity(entity).remove::<Rise>();
     }
 }
 
@@ -263,25 +267,45 @@ fn update_input(
     if !input.pressed(KeyCode::AltLeft) {
         if input.pressed(KeyCode::Right) {
             movement = time.delta_seconds() * PLAYER_VELOCITY_X;
-            // velocity.linvel.x = 400.0;
         } else if input.pressed(KeyCode::Left) {
             movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
-            // velocity.linvel.x = -400.0;
         }
         controller.translation = Some(Vec2::new(movement, -GRAVITY));
     } else if input.pressed(KeyCode::AltLeft) {
         player.translation.x = 0.0;
-        player.translation.y = 8.0;
+        player.translation.y = MAX_JUMP_HEIGHT;
         if input.pressed(KeyCode::Right) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X;
         } else if input.pressed(KeyCode::Left) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
         }
-        commands.entity(entity).insert(Air);
+        commands.entity(entity).insert(Rise);
         commands.entity(entity).remove::<Ground>();
     }
-
     // player.translation = Some(translation);
+}
+
+fn update_fall(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<
+        (
+            Entity,
+            &mut Player,
+            &mut Velocity,
+            &mut KinematicCharacterController,
+        ),
+        With<Fall>,
+    >,
+) {
+    if query.is_empty() {
+        return;
+    }
+    // let (mut enity, mut player, mut controller, output) = query.single_mut();
+    let (entity, mut player, mut velocity, mut controller) = query.single_mut();
+    let dt = time.delta_seconds();
+    player.translation.y -= GRAVITY * dt;
+    controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 }
 
 fn update_player_animation(
@@ -465,7 +489,7 @@ pub fn update_groud(
 
     if output.grounded {
         commands.entity(entity).insert(Ground);
-        commands.entity(entity).remove::<Air>();
+        commands.entity(entity).remove::<Fall>();
     } else {
         commands.entity(entity).remove::<Ground>();
     }
