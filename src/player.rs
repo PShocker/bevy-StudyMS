@@ -1,5 +1,5 @@
 use crate::animate::{Animation, AnimationIndices, AnimationTimer};
-use bevy::{asset::LoadState, prelude::*, utils::HashMap};
+use bevy::{app::RunFixedUpdateLoop, asset::LoadState, prelude::*, utils::HashMap};
 use bevy_rapier2d::{na::ComplexField, prelude::*};
 
 // 人物状态切换
@@ -70,8 +70,8 @@ enum Load {
 #[derive(Component)]
 struct Jump(f32, f32);
 
-const PLAYER_VELOCITY_X: f32 = 300.0;
-const GRAVITY: f32 = 10.0;
+const PLAYER_VELOCITY_X: f32 = 250.0;
+const GRAVITY: f32 = 12.0;
 
 const MAX_JUMP_HEIGHT: f32 = 5.8;
 
@@ -98,7 +98,7 @@ impl Plugin for PlayerPlugin {
                 update_groud.run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
-                PreUpdate,
+                RunFixedUpdateLoop,
                 update_player_animation.run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
@@ -224,11 +224,7 @@ fn update_rise(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut Player,
-        &mut KinematicCharacterController,
-    ),With<Rise>>,
+    mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController), With<Rise>>,
 ) {
     if query.is_empty() {
         return;
@@ -237,7 +233,7 @@ fn update_rise(
     let dt = time.delta_seconds();
     player.translation.y -= GRAVITY * dt;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
-    if  player.translation.y<=0.0{
+    if player.translation.y <= 0.0 {
         commands.entity(entity).insert(Fall);
         commands.entity(entity).remove::<Rise>();
     }
@@ -251,17 +247,19 @@ fn update_input(
         (
             Entity,
             &mut Player,
-            &mut Velocity,
+            &mut Animation,
             &mut KinematicCharacterController,
         ),
         With<Ground>,
     >,
+    assets: ResMut<AnimateAssets>,
+    mut state_change_ev: EventWriter<StateChangeEvent>,
 ) {
     if query.is_empty() {
         return;
     }
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
-    let (entity, mut player, mut velocity, mut controller) = query.single_mut();
+    let (entity, mut player, mut animation, mut controller) = query.single_mut();
     let mut movement = 0.0;
 
     if !input.pressed(KeyCode::AltLeft) {
@@ -355,7 +353,7 @@ fn update_player_animation(
                 state_change_ev.send_default();
             }
         }
-    } else if velocity.linvel.y.abs() > 0.0 {
+    } else {
         //jump状态
         // *animation = assets.animate_map.get("jump").unwrap().clone();
         // println!("{:?},{:?}", velocity.linvel,output.desired_translation.y.abs());

@@ -56,7 +56,7 @@ fn animate_player(
 ) {
     for (entity, mut animation, mut sprite) in &mut q_player {
         // println!("{:?}",animation.name);
-        if animation.timer.0.tick(time.delta()).just_finished() ||!state_change_ev.is_empty(){
+        if !state_change_ev.is_empty() || animation.timer.0.tick(time.delta()).just_finished() {
             let current_idx = animation
                 .indices.sprite_indices.iter()
                 .position(|s| *s == sprite.index)
