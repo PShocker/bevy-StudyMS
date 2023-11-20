@@ -34,7 +34,7 @@ fn main() {
                 ..default()
             }),
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
-            // RapierDebugRenderPlugin::default(), //显示碰撞线
+            RapierDebugRenderPlugin::default(), //显示碰撞线
         ))
         .add_plugins(PlayerPlugin)//人物
         .add_plugins(CameraPlugin)//镜头跟随
@@ -250,8 +250,6 @@ fn setup(
                 ),
                 RigidBody::Fixed,
                 Friction::coefficient(1.0),
-                Restitution::new(0.0),
-                ActiveEvents::CONTACT_FORCE_EVENTS,
             )); 
         }
         //地图左边墙壁

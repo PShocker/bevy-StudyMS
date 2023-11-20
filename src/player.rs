@@ -71,9 +71,9 @@ enum Load {
 struct Jump(f32, f32);
 
 const PLAYER_VELOCITY_X: f32 = 250.0;
-const GRAVITY: f32 = 12.0;
+const GRAVITY: f32 = 10.0;
 
-const MAX_JUMP_HEIGHT: f32 = 9.8;
+const MAX_JUMP_HEIGHT: f32 = 7.6;
 
 #[derive(Debug, Component, Clone, Default)]
 pub struct Ground;
@@ -203,15 +203,13 @@ fn player(
             direction: Direction::Right,
             sleep: Sleeping::disabled(),
             controller: KinematicCharacterController {
-                offset: CharacterLength::Absolute(0.1),
                 filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
-                snap_to_ground: Some(CharacterLength::Absolute(5.0)),
+                snap_to_ground: Some(CharacterLength::Absolute(1.0)),
                 ..default()
             },
         },
-        GravityScale(14.0),
-        ActiveEvents::CONTACT_FORCE_EVENTS,
         Friction::coefficient(1.0),
+        Ccd::enabled(),
         Fall,
     ));
     commands.insert_resource(AnimateAssets {
@@ -231,7 +229,7 @@ fn update_rise(
     }
     let (entity, mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
-    player.translation.y -= GRAVITY * dt;
+    player.translation.y -= GRAVITY * dt * 2.0;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
     if player.translation.y <= 0.0 {
         commands.entity(entity).insert(Fall);
@@ -269,6 +267,14 @@ fn update_input(
             movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
         }
         controller.translation = Some(Vec2::new(movement, -GRAVITY));
+    } else if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+        player.translation.x = 0.0;
+        player.translation.y = 2.4;
+        commands
+            .entity(entity)
+            .insert(DownJumpTimer(Timer::from_seconds(0.4, TimerMode::Once)));
+        commands.entity(entity).insert(Rise);
+        commands.entity(entity).remove::<Ground>();
     } else if input.pressed(KeyCode::AltLeft) {
         player.translation.x = 0.0;
         player.translation.y = MAX_JUMP_HEIGHT;
@@ -286,23 +292,16 @@ fn update_input(
 fn update_fall(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<
-        (
-            Entity,
-            &mut Player,
-            &mut Velocity,
-            &mut KinematicCharacterController,
-        ),
-        With<Fall>,
-    >,
+    mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController), With<Fall>>,
 ) {
     if query.is_empty() {
         return;
     }
+
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
-    let (entity, mut player, mut velocity, mut controller) = query.single_mut();
+    let (entity, mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
-    player.translation.y -= GRAVITY * dt;
+    player.translation.y -= GRAVITY * dt * 2.0;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 }
 
@@ -383,9 +382,10 @@ fn update_downjump(
     if query.is_empty() {
         return;
     }
-    let (entity, mut timer, mut player) = query.single_mut();
+    let (entity, mut timer, mut controller) = query.single_mut();
+    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
     if timer.0.tick(time.delta()).just_finished() {
-        // player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
+        controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
         commands.entity(entity).remove::<DownJumpTimer>();
     }
 }
