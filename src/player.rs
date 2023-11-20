@@ -73,7 +73,7 @@ struct Jump(f32, f32);
 const PLAYER_VELOCITY_X: f32 = 250.0;
 const GRAVITY: f32 = 12.0;
 
-const MAX_JUMP_HEIGHT: f32 = 5.8;
+const MAX_JUMP_HEIGHT: f32 = 9.8;
 
 #[derive(Debug, Component, Clone, Default)]
 pub struct Ground;
