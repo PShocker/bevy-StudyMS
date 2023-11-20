@@ -70,8 +70,8 @@ enum Load {
 #[derive(Component)]
 struct Jump(f32, f32);
 
-const PLAYER_VELOCITY_X: f32 = 200.0;
-const PLAYER_VELOCITY_Y: f32 = 240.0;
+const PLAYER_VELOCITY_X: f32 = 600.0;
+const PLAYER_VELOCITY_Y: f32 = 640.0;
 
 const MAX_JUMP_HEIGHT: f32 = 300.0;
 
@@ -177,12 +177,12 @@ fn player(
                     // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                texture_atlas: texture_atlas_handle.clone(),
+                // texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
             animation: animate_map.get("walk").unwrap().clone(),
-            rigid_body: RigidBody::Dynamic,
+            rigid_body: RigidBody::KinematicPositionBased,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
             collider: Collider::cuboid(16.0, 32.0),
             // collider: Collider::capsule_y(18.0, 16.0),
@@ -197,7 +197,7 @@ fn player(
             controller: KinematicCharacterController {
                 offset: CharacterLength::Absolute(0.1),
                 filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
-                snap_to_ground: Some(CharacterLength::Absolute(1.0)),
+                snap_to_ground: Some(CharacterLength::Absolute(5.0)),
                 ..default()
             },
         },
@@ -257,19 +257,22 @@ fn update_walk(
     }
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
     let (entity, player, mut velocity, mut controller) = query.single_mut();
-    if player.grounded && !input.pressed(KeyCode::AltLeft) {
-        let mut movement = 0.0;
+    let mut movement = 0.0;
+
+    if !input.pressed(KeyCode::AltLeft) {
         if input.pressed(KeyCode::Right) {
             movement = time.delta_seconds() * PLAYER_VELOCITY_X;
+            // velocity.linvel.x = 400.0;
         } else if input.pressed(KeyCode::Left) {
             movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
+            // velocity.linvel.x = -400.0;
         }
         match controller.translation {
-            Some(vec) => controller.translation = Some(Vec2::new(movement, vec.y)),
+            Some(vec) => controller.translation = Some(Vec2::new(movement, -110.0)),
             None => controller.translation = Some(Vec2::new(movement, -100.0)),
         }
     }
-
+    
     // player.translation = Some(translation);
 }
 
@@ -320,7 +323,7 @@ fn update_player_animation(
                 state_change_ev.send_default();
             }
         }
-    } else if velocity.linvel.y.abs()>=1.0{
+    } else if velocity.linvel.y.abs() >= 1.0 {
         //jump状态
         // *animation = assets.animate_map.get("jump").unwrap().clone();
         // println!("{:?},{:?}", velocity.linvel,output.desired_translation.y.abs());
