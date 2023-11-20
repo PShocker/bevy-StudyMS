@@ -75,6 +75,13 @@ const PLAYER_VELOCITY_Y: f32 = 640.0;
 
 const MAX_JUMP_HEIGHT: f32 = 300.0;
 
+#[derive(Debug, Component, Clone, Default)]
+pub struct Ground;
+#[derive(Debug, Component, Clone, Default)]
+pub struct Rise(pub f32);
+#[derive(Debug, Component, Clone, Default)]
+pub struct Fall(pub f32);
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -88,7 +95,7 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 FixedUpdate,
-                player_grounded_detect.run_if(in_state(Load::PlayerFinished)),
+                update_groud.run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
                 PreUpdate,
@@ -99,6 +106,7 @@ impl Plugin for PlayerPlugin {
                 (
                     update_flip,
                     // update_group,
+                    update_fall,
                     update_downjump,
                     update_walk,
                     update_jump,
@@ -204,6 +212,7 @@ fn player(
         GravityScale(14.0),
         ActiveEvents::CONTACT_FORCE_EVENTS,
         Friction::coefficient(1.0),
+        Fall(0.0),
     ));
     commands.insert_resource(AnimateAssets {
         animate_map: animate_map,
@@ -215,42 +224,36 @@ fn update_jump(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut Player,
-        &mut Velocity,
-        &mut KinematicCharacterController,
-    )>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Player,
+            &mut Velocity,
+            &mut KinematicCharacterController,
+        ),
+        With<Ground>,
+    >,
 ) {
-    let (entity, player, mut velocity, mut controller) = query.single_mut();
-    if player.grounded {
-        if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-            controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::GROUP_5));
-            commands
-                .entity(entity)
-                .insert(DownJumpTimer(Timer::from_seconds(10.0, TimerMode::Once)));
-        } else if input.pressed(KeyCode::AltLeft) {
-            if input.pressed(KeyCode::Right) {
-                velocity.linvel.x = 200.0;
-            }
-            if input.pressed(KeyCode::Left) {
-                velocity.linvel.x = -200.0;
-            }
-            velocity.linvel.y = 400.0;
-        }
+    if query.is_empty() {
+        return;
     }
+    let (entity, player, mut velocity, mut controller) = query.single_mut();
+    
 }
 
 fn update_walk(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut Player,
-        &mut Velocity,
-        &mut KinematicCharacterController,
-    )>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Player,
+            &mut Velocity,
+            &mut KinematicCharacterController,
+        ),
+        With<Ground>,
+    >,
 ) {
     if query.is_empty() {
         return;
@@ -271,8 +274,42 @@ fn update_walk(
             Some(vec) => controller.translation = Some(Vec2::new(movement, -110.0)),
             None => controller.translation = Some(Vec2::new(movement, -100.0)),
         }
+    }else if input.pressed(KeyCode::AltLeft) {
+        match controller.translation {
+            Some(vec) => controller.translation = Some(Vec2::new(0.0, 110.0)),
+            None => controller.translation = Some(Vec2::new(0.0, 100.0)),
+        }
+        commands.entity(entity).insert(Rise(0.0));
     }
-    
+
+    // player.translation = Some(translation);
+}
+
+fn update_fall(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<
+        (
+            Entity,
+            &mut Player,
+            &mut Velocity,
+            &mut KinematicCharacterController,
+        ),
+        With<Fall>,
+    >,
+) {
+    if query.is_empty() {
+        return;
+    }
+    // let (mut enity, mut player, mut controller, output) = query.single_mut();
+    let (entity, player, mut velocity, mut controller) = query.single_mut();
+    let mut movement = 0.0;
+
+    match controller.translation {
+        Some(vec) => controller.translation = Some(Vec2::new(movement, -110.0)),
+        None => controller.translation = Some(Vec2::new(movement, -100.0)),
+    }
+
     // player.translation = Some(translation);
 }
 
@@ -446,19 +483,20 @@ fn update_direction(
 }
 
 //通过碰撞检测人物是否在地面上
-pub fn player_grounded_detect(
-    mut contact_force_events: EventReader<ContactForceEvent>,
-    mut query: Query<(&mut Player, &mut GravityScale)>,
+pub fn update_groud(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut KinematicCharacterControllerOutput)>,
 ) {
-    // for contact_force_event in contact_force_events.iter() {
-    //     println!("Received contact force event: {contact_force_event:?}");
-    // }
-    let (mut player, mut gravity) = query.single_mut();
-    if !contact_force_events.is_empty() {
-        player.grounded = true;
-        contact_force_events.clear();
+    if query.is_empty() {
+        return;
+    }
+    let (mut entity, mut output) = query.single_mut();
+
+    if output.grounded {
+        commands.entity(entity).insert(Ground);
+        commands.entity(entity).remove::<Fall>();
     } else {
-        player.grounded = false;
+        commands.entity(entity).remove::<Ground>();
     }
 }
 
