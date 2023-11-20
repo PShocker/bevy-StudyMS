@@ -8,7 +8,7 @@ pub struct StateChangeEvent;
 
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct Player {
-    pub linvel: Vect,
+    pub translation: Vect,
     pub grounded: bool,
 }
 
@@ -108,7 +108,7 @@ impl Plugin for PlayerPlugin {
                     // update_group,
                     update_fall,
                     update_downjump,
-                    update_walk,
+                    update_input,
                     update_rise,
                     update_direction,
                 )
@@ -197,7 +197,7 @@ fn player(
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
             player: Player {
-                linvel: Vect::ZERO,
+                translation: Vect::ZERO,
                 grounded: false,
             },
             direction: Direction::Right,
@@ -227,7 +227,6 @@ fn update_rise(
     mut query: Query<(
         Entity,
         &mut Player,
-        &mut Velocity,
         &mut KinematicCharacterController,
         &mut Rise,
     )>,
@@ -236,11 +235,9 @@ fn update_rise(
         return;
     }
 
-    let (entity, player, mut velocity, mut controller, mut rise) = query.single_mut();
-    match controller.translation {
-        Some(vec) => controller.translation = Some(Vec2::new(vec.x, 10.0)),
-        None => controller.translation = Some(Vec2::new(0.0, 10.0)),
-    }
+    let (entity, player, mut controller, mut rise) = query.single_mut();
+    controller.translation = Some(Vec2::new(player.translation.x, 10.0));
+
     if rise.0.tick(time.delta()).just_finished() {
         // player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
         commands.entity(entity).remove::<Rise>();
@@ -250,7 +247,7 @@ fn update_rise(
     }
 }
 
-fn update_walk(
+fn update_input(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
@@ -268,7 +265,7 @@ fn update_walk(
         return;
     }
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
-    let (entity, player, mut velocity, mut controller) = query.single_mut();
+    let (entity, mut player, mut velocity, mut controller) = query.single_mut();
     let mut movement = 0.0;
 
     if !input.pressed(KeyCode::AltLeft) {
@@ -284,6 +281,12 @@ fn update_walk(
             None => controller.translation = Some(Vec2::new(movement, -100.0)),
         }
     } else if input.pressed(KeyCode::AltLeft) {
+        player.translation.x = 0.0;
+        if input.pressed(KeyCode::Right) {
+            player.translation.x = 10.0;
+        } else if input.pressed(KeyCode::Left) {
+            player.translation.x = -10.0;
+        }
         commands
             .entity(entity)
             .insert(Rise(Timer::from_seconds(0.2, TimerMode::Once)));
@@ -312,10 +315,7 @@ fn update_fall(
     let (entity, player, mut velocity, mut controller) = query.single_mut();
     let mut movement = 0.0;
 
-    match controller.translation {
-        Some(vec) => controller.translation = Some(Vec2::new(vec.x, -10.0)),
-        None => controller.translation = Some(Vec2::new(0.0, -10.0)),
-    }
+    controller.translation = Some(Vec2::new(player.translation.x, -10.0));
 
     // player.translation = Some(translation);
 }
