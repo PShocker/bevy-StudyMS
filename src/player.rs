@@ -78,9 +78,9 @@ const MAX_JUMP_HEIGHT: f32 = 300.0;
 #[derive(Debug, Component, Clone, Default)]
 pub struct Ground;
 #[derive(Debug, Component, Clone, Default)]
-pub struct Rise(pub f32);
+pub struct Rise(Timer);
 #[derive(Debug, Component, Clone, Default)]
-pub struct Fall(pub f32);
+pub struct Fall(f32);
 
 pub struct PlayerPlugin;
 
@@ -109,7 +109,7 @@ impl Plugin for PlayerPlugin {
                     update_fall,
                     update_downjump,
                     update_walk,
-                    update_jump,
+                    update_rise,
                     update_direction,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
@@ -185,7 +185,7 @@ fn player(
                     // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                // texture_atlas: texture_atlas_handle.clone(),
+                texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
@@ -220,25 +220,34 @@ fn player(
     next_state.set(Load::PlayerFinished);
 }
 
-fn update_jump(
+fn update_rise(
     input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<
-        (
-            Entity,
-            &mut Player,
-            &mut Velocity,
-            &mut KinematicCharacterController,
-        ),
-        With<Ground>,
-    >,
+    mut query: Query<(
+        Entity,
+        &mut Player,
+        &mut Velocity,
+        &mut KinematicCharacterController,
+        &mut Rise,
+    )>,
 ) {
     if query.is_empty() {
         return;
     }
-    let (entity, player, mut velocity, mut controller) = query.single_mut();
-    
+
+    let (entity, player, mut velocity, mut controller, mut rise) = query.single_mut();
+    match controller.translation {
+        Some(vec) => controller.translation = Some(Vec2::new(vec.x, 10.0)),
+        None => controller.translation = Some(Vec2::new(0.0, 10.0)),
+    }
+    if rise.0.tick(time.delta()).just_finished() {
+        // player.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
+        commands.entity(entity).remove::<Rise>();
+        commands.entity(entity).insert(Fall(0.0));
+
+        // println!("12345");
+    }
 }
 
 fn update_walk(
@@ -274,12 +283,10 @@ fn update_walk(
             Some(vec) => controller.translation = Some(Vec2::new(movement, -110.0)),
             None => controller.translation = Some(Vec2::new(movement, -100.0)),
         }
-    }else if input.pressed(KeyCode::AltLeft) {
-        match controller.translation {
-            Some(vec) => controller.translation = Some(Vec2::new(0.0, 110.0)),
-            None => controller.translation = Some(Vec2::new(0.0, 100.0)),
-        }
-        commands.entity(entity).insert(Rise(0.0));
+    } else if input.pressed(KeyCode::AltLeft) {
+        commands
+            .entity(entity)
+            .insert(Rise(Timer::from_seconds(0.2, TimerMode::Once)));
     }
 
     // player.translation = Some(translation);
@@ -306,8 +313,8 @@ fn update_fall(
     let mut movement = 0.0;
 
     match controller.translation {
-        Some(vec) => controller.translation = Some(Vec2::new(movement, -110.0)),
-        None => controller.translation = Some(Vec2::new(movement, -100.0)),
+        Some(vec) => controller.translation = Some(Vec2::new(vec.x, -10.0)),
+        None => controller.translation = Some(Vec2::new(0.0, -10.0)),
     }
 
     // player.translation = Some(translation);
@@ -343,7 +350,7 @@ fn update_player_animation(
             state_change_ev.send_default();
         }
         // println!("walk");
-    } else if output.desired_translation.x.abs() < 1.0 && player.grounded {
+    } else if output.desired_translation.x.abs() == 0.0 && player.grounded {
         //stand状态或prone状态
         if input.pressed(KeyCode::Down) {
             if animation.name != "prone" {
@@ -360,7 +367,7 @@ fn update_player_animation(
                 state_change_ev.send_default();
             }
         }
-    } else if velocity.linvel.y.abs() >= 1.0 {
+    } else if velocity.linvel.y.abs() > 0.0 {
         //jump状态
         // *animation = assets.animate_map.get("jump").unwrap().clone();
         // println!("{:?},{:?}", velocity.linvel,output.desired_translation.y.abs());
@@ -485,18 +492,20 @@ fn update_direction(
 //通过碰撞检测人物是否在地面上
 pub fn update_groud(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut KinematicCharacterControllerOutput)>,
+    mut query: Query<(Entity, &mut KinematicCharacterControllerOutput, &mut Player)>,
 ) {
     if query.is_empty() {
         return;
     }
-    let (mut entity, mut output) = query.single_mut();
+    let (mut entity, mut output, mut player) = query.single_mut();
 
     if output.grounded {
         commands.entity(entity).insert(Ground);
         commands.entity(entity).remove::<Fall>();
+        player.grounded = true;
     } else {
         commands.entity(entity).remove::<Ground>();
+        player.grounded = false;
     }
 }
 
