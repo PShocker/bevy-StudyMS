@@ -212,7 +212,7 @@ fn player(
                 ..default()
             },
         },
-        // Friction::coefficient(1.0),
+        Friction::coefficient(1.0),
         // Ccd::enabled(),
         Fall,
     ));
