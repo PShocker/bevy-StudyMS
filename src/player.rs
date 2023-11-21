@@ -9,7 +9,7 @@ pub struct StateChangeEvent;
 #[derive(Debug, Component, Clone, Copy, Default)]
 pub struct Player {
     pub translation: Vect,
-    pub grounded: bool,
+    pub foothold: Option<CharacterCollision>,
 }
 
 #[derive(Debug, Resource)]
@@ -203,7 +203,7 @@ fn player(
             restitution: Restitution::new(0.0),
             player: Player {
                 translation: Vect::ZERO,
-                grounded: false,
+                foothold: None,
             },
             direction: Direction::Right,
             sleep: Sleeping::disabled(),
@@ -503,7 +503,7 @@ pub fn update_groud(
     }
 }
 
-//检测人物是否走到fh边缘并下落
+//检测人物是否走到fh边缘并下落,还要判断人物是否在斜坡上
 pub fn update_ground(
     time: Res<Time>,
     mut commands: Commands,
@@ -518,6 +518,16 @@ pub fn update_ground(
         player.translation.y = 0.0;
         commands.entity(entity).remove::<Ground>();
         commands.entity(entity).insert(Rise);
+    } else {
+        if output.collisions.len() > 0 {
+            let entity=output.collisions[0].entity;
+            // inspect_entity();
+            // println!("{:?}", commands.entity(entity).log_components());
+            println!("{:?}", output.collisions[0].character_translation);
+            println!("{:?}", output.collisions[0].desired_translation);
+            player.foothold=Some(output.collisions[0]);
+        }
+        // println!("{:?}", output.collisions[1].entity);
     }
 }
 
