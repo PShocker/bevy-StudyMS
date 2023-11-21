@@ -13,6 +13,15 @@ pub struct FootHold {
     pub id: i32,
 }
 
+#[derive(Debug, Component, Clone,PartialEq,Default)]
+pub enum FootHoldType {
+    #[default]
+    Slope,
+    Horizontal,
+    Vertical,
+    Unknow,
+}
+
 /*
 碰撞检测规则:
    (A.collision_groups().memberships & B.collision_groups().filter) != 0
@@ -27,27 +36,44 @@ pub struct FootHold {
 (Group::GROUP_2|Group::GROUP_3 & Group::GROUP_1) !=0
 */
 
-pub fn get_foothold_group(p1: Vec2, p2: Vec2) -> Group {
-    //先判断平行
-    if p1.y == p2.y {
-        if p1.x < p2.x {
-            //仅检测从上到下的碰撞
-            return Group::GROUP_1;
-        } else {
-            //仅检测从下到上的碰撞
-            return Group::GROUP_2;
+impl FootHold {
+    /// Creates a new collision-groups with the given membership masks and filter masks.
+    pub fn get_foothold_group(p1: Vec2, p2: Vec2) -> Group {
+        //先判断平行
+        if p1.y == p2.y {
+            if p1.x < p2.x {
+                //仅检测从上到下的碰撞
+                return Group::GROUP_1;
+            } else {
+                //仅检测从下到上的碰撞
+                return Group::GROUP_2;
+            }
         }
-    }
-    //垂直
-    if p1.x == p2.x {
-        if p1.y < p2.y {
-            //仅检测从左到右的碰撞
-            return Group::GROUP_3;
-        } else {
-            //仅检测从右到左的碰撞
-            return Group::GROUP_4;
+        //垂直
+        if p1.x == p2.x {
+            if p1.y < p2.y {
+                //仅检测从左到右的碰撞
+                return Group::GROUP_3;
+            } else {
+                //仅检测从右到左的碰撞
+                return Group::GROUP_4;
+            }
         }
+        //斜面
+        return Group::GROUP_1;
     }
-    //斜面
-    return Group::GROUP_1;
+
+    //判断斜面
+    pub fn get_foothold_slope(p1: Vec2, p2: Vec2) -> FootHoldType {
+        //先判断平行
+        if p1.y == p2.y {
+            return FootHoldType::Horizontal;
+        }
+        //垂直
+        if p1.x == p2.x {
+            return FootHoldType::Vertical;
+        }
+        //斜面
+        return FootHoldType::Slope;
+    }
 }

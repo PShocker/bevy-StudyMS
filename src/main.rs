@@ -1,11 +1,11 @@
 //! Displays a single [`Sprite`], created from an image.
 
-use animate::{Animations, AnimatePlugin};
+use animate::{AnimatePlugin, Animations};
 use background::{BackGround, BackGroundEdge, BackGroundPlugin};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
-use foothold::{get_foothold_group, FootHold};
+use foothold::FootHold;
 use player::PlayerPlugin;
 use std::{
     cmp::{max, min},
@@ -21,7 +21,6 @@ mod foothold;
 mod player;
 mod utils;
 
-
 fn main() {
     App::new()
         .add_plugins((
@@ -36,19 +35,16 @@ fn main() {
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
             RapierDebugRenderPlugin::default(), //显示碰撞线
         ))
-        .add_plugins(PlayerPlugin)//人物
-        .add_plugins(CameraPlugin)//镜头跟随
-        .add_plugins(AnimatePlugin)//动画
-        .add_plugins(BackGroundPlugin)//生成背景
+        .add_plugins(PlayerPlugin) //人物
+        .add_plugins(CameraPlugin) //镜头跟随
+        .add_plugins(AnimatePlugin) //动画
+        .add_plugins(BackGroundPlugin) //生成背景
         .add_systems(Startup, setup) //初始化
         //人物行走输入事件和人物方向
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     //读取地图json,json文件参考 https://github.com/Kagamia/MapRenderWeb.git
     //参考https://www.bilibili.com/video/BV1ou4y1o7XZ/
     let path = "./assets/Map/Map/Map0/000010000.json";
@@ -243,14 +239,18 @@ fn setup(
                 ),
                 CollisionGroups::new(
                     Group::GROUP_1,
-                    get_foothold_group(
+                    FootHold::get_foothold_group(
                         Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                         Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                     ),
                 ),
+                FootHold::get_foothold_slope(
+                    Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
+                    Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
+                ),
                 RigidBody::Fixed,
                 Friction::coefficient(1.0),
-            )); 
+            ));
         }
         //地图左边墙壁
         commands.spawn((Collider::segment(

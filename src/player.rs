@@ -1,4 +1,7 @@
-use crate::animate::{Animation, AnimationIndices, AnimationTimer};
+use crate::{
+    animate::{Animation, AnimationIndices, AnimationTimer},
+    foothold::FootHoldType,
+};
 use bevy::{app::RunFixedUpdateLoop, asset::LoadState, prelude::*, utils::HashMap};
 use bevy_rapier2d::{na::ComplexField, prelude::*};
 
@@ -6,10 +9,10 @@ use bevy_rapier2d::{na::ComplexField, prelude::*};
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Event)]
 pub struct StateChangeEvent;
 
-#[derive(Debug, Component, Clone, Copy, Default)]
+#[derive(Debug, Component, Clone, Default)]
 pub struct Player {
     pub translation: Vect,
-    pub foothold: Option<CharacterCollision>,
+    pub slope: bool,
 }
 
 #[derive(Debug, Resource)]
@@ -74,8 +77,8 @@ const PLAYER_VELOCITY_X: f32 = 250.0;
 const GRAVITY: f32 = 10.0;
 // const GRAVITY: f32 = 0.0;
 //人在地砖上对地砖的力
-// const GROUND_FORCE: f32 = 1.0e-10;
-const GROUND_FORCE: f32 = 0.0;
+const GROUND_FORCE: f32 = 1.0e-10;
+// const GROUND_FORCE: f32 = 0.0;
 
 const MAX_JUMP_HEIGHT: f32 = 7.6;
 
@@ -85,6 +88,9 @@ pub struct Ground;
 pub struct Rise;
 #[derive(Debug, Component, Clone, Default)]
 pub struct Fall;
+
+#[derive(Debug, Component, Clone, Default)]
+pub struct CurrentFootHold;
 
 pub struct PlayerPlugin;
 
@@ -99,7 +105,7 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 PreUpdate,
-                update_groud.run_if(in_state(Load::PlayerFinished)),
+                (update_ground).run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
                 RunFixedUpdateLoop,
@@ -110,8 +116,9 @@ impl Plugin for PlayerPlugin {
                 (
                     update_flip,
                     // update_group,
+                    update_edge,
                     update_fall,
-                    update_ground,
+                    update_slope,
                     update_downjump,
                     update_input,
                     update_rise,
@@ -203,7 +210,7 @@ fn player(
             restitution: Restitution::new(0.0),
             player: Player {
                 translation: Vect::ZERO,
-                foothold: None,
+                slope: false,
             },
             direction: Direction::Right,
             sleep: Sleeping::disabled(),
@@ -293,6 +300,21 @@ fn update_input(
         } else if input.pressed(KeyCode::Left) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
         }
+        // println!("{:?}", player.foothold);
+        // match player.foothold {
+        //     FootHoldType::Slope => {
+        //         controller.translation = Some(Vec2::new(player.translation.x, -GRAVITY))
+        //     }
+        //     FootHoldType::Horizontal => {
+        //         controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+        //     }
+        //     FootHoldType::Vertical => {
+        //         controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+        //     }
+        //     FootHoldType::None => {
+        //         controller.translation =Some(Vec2::new(player.translation.x, -GROUND_FORCE));
+        //     }
+        // }
         controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE));
     }
     // player.translation = Some(translation);
@@ -485,7 +507,7 @@ fn update_direction(
 }
 
 //通过碰撞检测人物是否在地面上
-pub fn update_groud(
+pub fn update_ground(
     mut commands: Commands,
     mut query: Query<(Entity, &mut KinematicCharacterControllerOutput, &mut Player), With<Fall>>,
 ) {
@@ -503,7 +525,7 @@ pub fn update_groud(
 }
 
 //检测人物是否走到fh边缘并下落,还要判断人物是否在斜坡上
-pub fn update_ground(
+pub fn update_edge(
     time: Res<Time>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut KinematicCharacterControllerOutput, &mut Player), With<Ground>>,
@@ -519,15 +541,28 @@ pub fn update_ground(
         commands.entity(entity).insert(Rise);
     } else {
         if output.collisions.len() > 0 {
-            let entity=output.collisions[0].entity;
-            // inspect_entity();
+            let entity = output.collisions[0].entity;
+            // println!("{:?}", );
             println!("{:?}", commands.entity(entity).log_components());
-            // println!("{:?}", output.collisions[0].character_translation);
-            // println!("{:?}", output.collisions[0].character_translation);
-            player.foothold=Some(output.collisions[0]);
+            commands.entity(entity).insert(CurrentFootHold);
         }
-        // println!("{:?}", output.collisions[1].entity);
     }
+}
+
+//通过碰撞检测人物是否在斜面上
+pub fn update_slope(
+    mut commands: Commands,
+    // mut query: Query<(Entity, &mut Player), With<CurrentFootHold>>,
+    mut query: Query<(Entity, &mut FootHoldType, &mut Player), With<CurrentFootHold>>,
+) {
+    if query.is_empty() {
+        return;
+    }
+    let (mut entity, mut player) = query.single();
+    println!("{:?}", entity);
+    // player.foothold = types.clone();
+    // println!("{:?}", player.foothold);
+    // commands.entity(entity).remove::<FootHold>();
 }
 
 fn setup_player_assets(
