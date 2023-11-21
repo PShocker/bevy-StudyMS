@@ -70,8 +70,10 @@ enum Load {
 #[derive(Component)]
 struct Jump(f32, f32);
 
-const PLAYER_VELOCITY_X: f32 = 250.0;
+const PLAYER_VELOCITY_X: f32 = 350.0;
 const GRAVITY: f32 = 10.0;
+//人在地砖上对地砖的力
+const GROUND_FORCE: f32 = 1.0e-10;
 
 const MAX_JUMP_HEIGHT: f32 = 7.6;
 
@@ -107,6 +109,7 @@ impl Plugin for PlayerPlugin {
                     update_flip,
                     // update_group,
                     update_fall,
+                    update_ground,
                     update_downjump,
                     update_input,
                     update_rise,
@@ -185,7 +188,7 @@ fn player(
                     // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                texture_atlas: texture_atlas_handle.clone(),
+                // texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
@@ -259,23 +262,7 @@ fn update_input(
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
     let (entity, mut player, mut animation, mut controller) = query.single_mut();
     let mut movement = 0.0;
-
-    if !input.pressed(KeyCode::AltLeft) {
-        if input.pressed(KeyCode::Right) {
-            movement = time.delta_seconds() * PLAYER_VELOCITY_X;
-        } else if input.pressed(KeyCode::Left) {
-            movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
-        }
-        controller.translation = Some(Vec2::new(movement, -GRAVITY));
-    } else if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-        player.translation.x = 0.0;
-        player.translation.y = 2.4;
-        commands
-            .entity(entity)
-            .insert(DownJumpTimer(Timer::from_seconds(0.4, TimerMode::Once)));
-        commands.entity(entity).insert(Rise);
-        commands.entity(entity).remove::<Ground>();
-    } else if input.pressed(KeyCode::AltLeft) {
+    if input.pressed(KeyCode::AltLeft) {
         player.translation.x = 0.0;
         player.translation.y = MAX_JUMP_HEIGHT;
         if input.pressed(KeyCode::Right) {
@@ -283,8 +270,24 @@ fn update_input(
         } else if input.pressed(KeyCode::Left) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
         }
-        commands.entity(entity).insert(Rise);
         commands.entity(entity).remove::<Ground>();
+        commands.entity(entity).insert(Rise);
+    } else if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+        player.translation.x = 0.0;
+        player.translation.y = 2.4;
+        commands
+            .entity(entity)
+            .insert(DownJumpTimer(Timer::from_seconds(0.4, TimerMode::Once)));
+        commands.entity(entity).remove::<Ground>();
+        commands.entity(entity).insert(Rise);
+    } else if !input.pressed(KeyCode::AltLeft) {
+        if input.pressed(KeyCode::Right) {
+            movement = time.delta_seconds() * PLAYER_VELOCITY_X;
+        } else if input.pressed(KeyCode::Left) {
+            movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
+        }
+        player.translation.x = movement;
+        controller.translation = Some(Vec2::new(movement, -GROUND_FORCE));
     }
     // player.translation = Some(translation);
 }
@@ -304,6 +307,7 @@ fn update_fall(
     player.translation.y -= GRAVITY * dt * 2.0;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 }
+
 
 fn update_player_animation(
     input: Res<Input<KeyCode>>,
@@ -478,7 +482,7 @@ fn update_direction(
 //通过碰撞检测人物是否在地面上
 pub fn update_groud(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut KinematicCharacterControllerOutput, &mut Player)>,
+    mut query: Query<(Entity, &mut KinematicCharacterControllerOutput, &mut Player), With<Fall>>,
 ) {
     if query.is_empty() {
         return;
@@ -490,6 +494,24 @@ pub fn update_groud(
         commands.entity(entity).remove::<Fall>();
     } else {
         commands.entity(entity).remove::<Ground>();
+    }
+}
+
+//检测人物是否走到fh边缘并下落
+pub fn update_ground(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut KinematicCharacterControllerOutput, &mut Player), With<Ground>>,
+) {
+    if query.is_empty() {
+        return;
+    }
+    let (mut entity, mut output, mut player) = query.single_mut();
+
+    if !output.grounded {
+        player.translation.y = 0.0;
+        commands.entity(entity).remove::<Ground>();
+        commands.entity(entity).insert(Rise);
     }
 }
 
