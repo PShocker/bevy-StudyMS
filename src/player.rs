@@ -263,7 +263,18 @@ fn update_input(
     let (entity, mut player, mut animation, mut controller) = query.single_mut();
     player.translation.x = 0.0;
     player.translation.y = 0.0;
-    if input.pressed(KeyCode::AltLeft) {
+    if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
+        player.translation.y = 2.4;
+        commands
+            .entity(entity)
+            .insert(DownJumpTimer(Timer::from_seconds(0.4, TimerMode::Once)));
+        commands.entity(entity).remove::<Ground>();
+        commands.entity(entity).insert(Rise);
+
+        let dt = time.delta_seconds();
+        player.translation.y -= GRAVITY * dt * 2.0;
+        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
+    } else if input.pressed(KeyCode::AltLeft) {
         player.translation.y = MAX_JUMP_HEIGHT;
         if input.pressed(KeyCode::Right) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X;
@@ -272,16 +283,7 @@ fn update_input(
         }
         commands.entity(entity).remove::<Ground>();
         commands.entity(entity).insert(Rise);
-        let dt = time.delta_seconds();
-        player.translation.y -= GRAVITY * dt * 2.0;
-        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
-    } else if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-        player.translation.y = 2.4;
-        commands
-            .entity(entity)
-            .insert(DownJumpTimer(Timer::from_seconds(0.4, TimerMode::Once)));
-        commands.entity(entity).remove::<Ground>();
-        commands.entity(entity).insert(Rise);
+
         let dt = time.delta_seconds();
         player.translation.y -= GRAVITY * dt * 2.0;
         controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
