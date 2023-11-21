@@ -276,7 +276,6 @@ fn update_input(
         player.translation.y -= GRAVITY * dt * 2.0;
         controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
     } else if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
-        player.translation.x = 0.0;
         player.translation.y = 2.4;
         commands
             .entity(entity)
