@@ -70,10 +70,12 @@ enum Load {
 #[derive(Component)]
 struct Jump(f32, f32);
 
-const PLAYER_VELOCITY_X: f32 = 350.0;
+const PLAYER_VELOCITY_X: f32 = 250.0;
 const GRAVITY: f32 = 10.0;
+// const GRAVITY: f32 = 0.0;
 //人在地砖上对地砖的力
-const GROUND_FORCE: f32 = 1.0e-10;
+// const GROUND_FORCE: f32 = 1.0e-10;
+const GROUND_FORCE: f32 = 0.0;
 
 const MAX_JUMP_HEIGHT: f32 = 7.6;
 
@@ -195,8 +197,8 @@ fn player(
             animation: animate_map.get("walk").unwrap().clone(),
             rigid_body: RigidBody::KinematicPositionBased,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
-            collider: Collider::cuboid(16.0, 32.0),
-            // collider: Collider::capsule_y(18.0, 16.0),
+            // collider: Collider::cuboid(16.0, 32.0),
+            collider: Collider::capsule_y(18.0, 16.0),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
             player: Player {
@@ -207,12 +209,11 @@ fn player(
             sleep: Sleeping::disabled(),
             controller: KinematicCharacterController {
                 filter_groups: Some(CollisionGroups::new(Group::GROUP_1, Group::ALL)),
-                snap_to_ground: Some(CharacterLength::Absolute(1.0)),
                 ..default()
             },
         },
-        Friction::coefficient(1.0),
-        Ccd::enabled(),
+        // Friction::coefficient(1.0),
+        // Ccd::enabled(),
         Fall,
     ));
     commands.insert_resource(AnimateAssets {
