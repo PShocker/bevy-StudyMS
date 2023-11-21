@@ -197,8 +197,8 @@ fn player(
             animation: animate_map.get("walk").unwrap().clone(),
             rigid_body: RigidBody::KinematicPositionBased,
             rotation_constraints: LockedAxes::ROTATION_LOCKED,
-            // collider: Collider::cuboid(16.0, 32.0),
-            collider: Collider::capsule_y(18.0, 16.0),
+            collider: Collider::cuboid(16.0, 32.0),
+            // collider: Collider::capsule_y(18.0, 16.0),
             velocity: Velocity::zero(),
             restitution: Restitution::new(0.0),
             player: Player {
@@ -213,7 +213,7 @@ fn player(
             },
         },
         Friction::coefficient(1.0),
-        // Ccd::enabled(),
+        Ccd::enabled(),
         Fall,
     ));
     commands.insert_resource(AnimateAssets {
@@ -223,7 +223,6 @@ fn player(
 }
 
 fn update_rise(
-    input: Res<Input<KeyCode>>,
     time: Res<Time>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController), With<Rise>>,
@@ -522,9 +521,9 @@ pub fn update_ground(
         if output.collisions.len() > 0 {
             let entity=output.collisions[0].entity;
             // inspect_entity();
-            // println!("{:?}", commands.entity(entity).log_components());
-            println!("{:?}", output.collisions[0].character_translation);
-            println!("{:?}", output.collisions[0].desired_translation);
+            println!("{:?}", commands.entity(entity).log_components());
+            // println!("{:?}", output.collisions[0].character_translation);
+            // println!("{:?}", output.collisions[0].character_translation);
             player.foothold=Some(output.collisions[0]);
         }
         // println!("{:?}", output.collisions[1].entity);
