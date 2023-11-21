@@ -5,7 +5,7 @@ use background::{BackGround, BackGroundEdge, BackGroundPlugin};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use camera::*;
-use foothold::FootHold;
+use foothold::{FootHold, FootHoldType};
 use player::PlayerPlugin;
 use std::{
     cmp::{max, min},
@@ -253,14 +253,20 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             ));
         }
         //地图左边墙壁
-        commands.spawn((Collider::segment(
-            Vec2::new(left as f32, -10000.0),
-            Vec2::new(left as f32, 10000.0),
-        ),));
+        commands.spawn((
+            Collider::segment(
+                Vec2::new(left as f32, -10000.0),
+                Vec2::new(left as f32, 10000.0),
+            ),
+            FootHoldType::Vertical,
+        ));
         //地图右边墙壁
-        commands.spawn((Collider::segment(
-            Vec2::new(right as f32, -10000.0),
-            Vec2::new(right as f32, 10000.0),
-        ),));
+        commands.spawn((
+            Collider::segment(
+                Vec2::new(right as f32, -10000.0),
+                Vec2::new(right as f32, 10000.0),
+            ),
+            FootHoldType::Vertical,
+        ));
     }
 }

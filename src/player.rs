@@ -12,7 +12,7 @@ pub struct StateChangeEvent;
 #[derive(Debug, Component, Clone, Default)]
 pub struct Player {
     pub translation: Vect,
-    pub slope: bool,
+    pub foot_hold_type: FootHoldType,
 }
 
 #[derive(Debug, Resource)]
@@ -122,6 +122,7 @@ impl Plugin for PlayerPlugin {
                     update_downjump,
                     update_input,
                     update_rise,
+                    update_collision,
                     update_direction,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
@@ -210,7 +211,7 @@ fn player(
             restitution: Restitution::new(0.0),
             player: Player {
                 translation: Vect::ZERO,
-                slope: false,
+                foot_hold_type: FootHoldType::Unknow,
             },
             direction: Direction::Right,
             sleep: Sleeping::disabled(),
@@ -227,24 +228,6 @@ fn player(
         animate_map: animate_map,
     });
     next_state.set(Load::PlayerFinished);
-}
-
-fn update_rise(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController), With<Rise>>,
-) {
-    if query.is_empty() {
-        return;
-    }
-    let (entity, mut player, mut controller) = query.single_mut();
-    let dt = time.delta_seconds();
-    player.translation.y -= GRAVITY * dt * 2.0;
-    controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
-    if player.translation.y <= 0.0 {
-        commands.entity(entity).insert(Fall);
-        commands.entity(entity).remove::<Rise>();
-    }
 }
 
 fn update_input(
@@ -300,29 +283,66 @@ fn update_input(
         } else if input.pressed(KeyCode::Left) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
         }
-        if  player.slope{
-            controller.translation = Some(Vec2::new(player.translation.x, -GRAVITY))
-        }else {
-            controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+        // println!("{:?}", player.foothold);
+        match player.foot_hold_type {
+            FootHoldType::Slope => {
+                controller.translation = Some(Vec2::new(player.translation.x, -GRAVITY))
+            }
+            FootHoldType::Horizontal => {
+                controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+            }
+            FootHoldType::Vertical => {
+                controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+            }
+            FootHoldType::Unknow => {
+                controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE));
+            }
         }
     }
     // player.translation = Some(translation);
 }
 
+fn update_rise(
+    time: Res<Time>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController), With<Rise>>,
+) {
+    if query.is_empty() {
+        return;
+    }
+    let (entity, mut player, mut controller) = query.single_mut();
+    let dt = time.delta_seconds();
+    player.translation.y -= GRAVITY * dt * 2.0;
+    println!("{:?}", player.foot_hold_type);
+    if player.foot_hold_type == FootHoldType::Vertical {
+        controller.translation = Some(Vec2::new(0.0, player.translation.y));
+    } else {
+        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
+    }
+    if player.translation.y <= 0.0 {
+        commands.entity(entity).insert(Fall);
+        commands.entity(entity).remove::<Rise>();
+    }
+}
+
 fn update_fall(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Player, &mut KinematicCharacterController), With<Fall>>,
+    mut query: Query<(&mut Player, &mut KinematicCharacterController), With<Fall>>,
 ) {
     if query.is_empty() {
         return;
     }
 
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
-    let (entity, mut player, mut controller) = query.single_mut();
+    let (mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
     player.translation.y -= GRAVITY * dt * 2.0;
-    controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
+    if player.foot_hold_type == FootHoldType::Vertical {
+        controller.translation = Some(Vec2::new(0.0, player.translation.y));
+    } else {
+        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
+    }
 }
 
 fn update_player_animation(
@@ -513,7 +533,23 @@ pub fn update_ground(
     }
 }
 
-//检测人物是否走到fh边缘并下落,还要判断人物是否在斜坡上
+//检测碰撞地砖
+pub fn update_collision(
+    mut commands: Commands,
+    mut query: Query<&mut KinematicCharacterControllerOutput, With<Player>>,
+) {
+    if query.is_empty() {
+        return;
+    }
+    let output = query.single_mut();
+    if output.collisions.len() > 0 {
+        println!("{}", output.collisions.len());
+        let entity = output.collisions[0].entity;
+        commands.entity(entity).insert(CurrentFootHold);
+    }
+}
+
+//检测人物是否走到fh边缘并下落
 pub fn update_edge(
     time: Res<Time>,
     mut commands: Commands,
@@ -523,36 +559,25 @@ pub fn update_edge(
         return;
     }
     let (mut entity, mut output, mut player) = query.single_mut();
-
     if !output.grounded {
         player.translation.y = 0.0;
         commands.entity(entity).remove::<Ground>();
         commands.entity(entity).insert(Rise);
-    } else {
-        if output.collisions.len() > 0 {
-            let entity = output.collisions[0].entity;
-            commands.entity(entity).insert(CurrentFootHold);
-        }
-    }
+    } 
 }
 
-//通过碰撞检测人物是否在斜面上
+//通过碰撞检测人物地砖
 pub fn update_slope(
     mut commands: Commands,
-    // mut query: Query<(Entity, &mut Player), With<CurrentFootHold>>,
     mut q_hold: Query<(Entity, &mut FootHoldType), With<CurrentFootHold>>,
     mut q_player: Query<&mut Player>,
 ) {
-    if q_hold.is_empty() ||q_player.is_empty(){
+    if q_hold.is_empty() || q_player.is_empty() {
         return;
     }
     let (mut entity, mut foot_hold_type) = q_hold.single();
-    let mut player=q_player.single_mut();
-    if *foot_hold_type==FootHoldType::Slope {
-        player.slope = true;
-    }else {
-        player.slope=false;
-    }
+    let mut player = q_player.single_mut();
+    player.foot_hold_type = foot_hold_type.clone();
     commands.entity(entity).remove::<CurrentFootHold>();
 }
 
