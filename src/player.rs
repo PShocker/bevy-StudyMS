@@ -73,11 +73,11 @@ enum Load {
 #[derive(Component)]
 struct Jump(f32, f32);
 
-const PLAYER_VELOCITY_X: f32 = 250.0;
+const PLAYER_VELOCITY_X: f32 = 300.0;
 const GRAVITY: f32 = 10.0;
 // const GRAVITY: f32 = 0.0;
 //人在地砖上对地砖的力
-const GROUND_FORCE: f32 = 1.0e-10;
+const GROUND_FORCE: f32 = 1.0e-3;
 // const GROUND_FORCE: f32 = 0.0;
 
 const MAX_JUMP_HEIGHT: f32 = 7.6;
@@ -197,7 +197,7 @@ fn player(
                     // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                // texture_atlas: texture_atlas_handle.clone(),
+                texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
@@ -300,22 +300,11 @@ fn update_input(
         } else if input.pressed(KeyCode::Left) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
         }
-        // println!("{:?}", player.foothold);
-        // match player.foothold {
-        //     FootHoldType::Slope => {
-        //         controller.translation = Some(Vec2::new(player.translation.x, -GRAVITY))
-        //     }
-        //     FootHoldType::Horizontal => {
-        //         controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
-        //     }
-        //     FootHoldType::Vertical => {
-        //         controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
-        //     }
-        //     FootHoldType::None => {
-        //         controller.translation =Some(Vec2::new(player.translation.x, -GROUND_FORCE));
-        //     }
-        // }
-        controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE));
+        if  player.slope{
+            controller.translation = Some(Vec2::new(player.translation.x, -GRAVITY))
+        }else {
+            controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+        }
     }
     // player.translation = Some(translation);
 }
@@ -542,8 +531,6 @@ pub fn update_edge(
     } else {
         if output.collisions.len() > 0 {
             let entity = output.collisions[0].entity;
-            // println!("{:?}", );
-            println!("{:?}", commands.entity(entity).log_components());
             commands.entity(entity).insert(CurrentFootHold);
         }
     }
@@ -553,16 +540,20 @@ pub fn update_edge(
 pub fn update_slope(
     mut commands: Commands,
     // mut query: Query<(Entity, &mut Player), With<CurrentFootHold>>,
-    mut query: Query<(Entity, &mut FootHoldType, &mut Player), With<CurrentFootHold>>,
+    mut q_hold: Query<(Entity, &mut FootHoldType), With<CurrentFootHold>>,
+    mut q_player: Query<&mut Player>,
 ) {
-    if query.is_empty() {
+    if q_hold.is_empty() ||q_player.is_empty(){
         return;
     }
-    let (mut entity, mut player) = query.single();
-    println!("{:?}", entity);
-    // player.foothold = types.clone();
-    // println!("{:?}", player.foothold);
-    // commands.entity(entity).remove::<FootHold>();
+    let (mut entity, mut foot_hold_type) = q_hold.single();
+    let mut player=q_player.single_mut();
+    if *foot_hold_type==FootHoldType::Slope {
+        player.slope = true;
+    }else {
+        player.slope=false;
+    }
+    commands.entity(entity).remove::<CurrentFootHold>();
 }
 
 fn setup_player_assets(
