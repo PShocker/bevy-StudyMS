@@ -261,9 +261,9 @@ fn update_input(
     }
     // let (mut enity, mut player, mut controller, output) = query.single_mut();
     let (entity, mut player, mut animation, mut controller) = query.single_mut();
-    let mut movement = 0.0;
+    player.translation.x = 0.0;
+    player.translation.y = 0.0;
     if input.pressed(KeyCode::AltLeft) {
-        player.translation.x = 0.0;
         player.translation.y = MAX_JUMP_HEIGHT;
         if input.pressed(KeyCode::Right) {
             player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X;
@@ -272,6 +272,9 @@ fn update_input(
         }
         commands.entity(entity).remove::<Ground>();
         commands.entity(entity).insert(Rise);
+        let dt = time.delta_seconds();
+        player.translation.y -= GRAVITY * dt * 2.0;
+        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
     } else if input.pressed(KeyCode::AltLeft) && input.pressed(KeyCode::Down) {
         player.translation.x = 0.0;
         player.translation.y = 2.4;
@@ -280,14 +283,16 @@ fn update_input(
             .insert(DownJumpTimer(Timer::from_seconds(0.4, TimerMode::Once)));
         commands.entity(entity).remove::<Ground>();
         commands.entity(entity).insert(Rise);
+        let dt = time.delta_seconds();
+        player.translation.y -= GRAVITY * dt * 2.0;
+        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
     } else if !input.pressed(KeyCode::AltLeft) {
         if input.pressed(KeyCode::Right) {
-            movement = time.delta_seconds() * PLAYER_VELOCITY_X;
+            player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X;
         } else if input.pressed(KeyCode::Left) {
-            movement = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
+            player.translation.x = time.delta_seconds() * PLAYER_VELOCITY_X * -1.0;
         }
-        player.translation.x = movement;
-        controller.translation = Some(Vec2::new(movement, -GROUND_FORCE));
+        controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE));
     }
     // player.translation = Some(translation);
 }
@@ -307,7 +312,6 @@ fn update_fall(
     player.translation.y -= GRAVITY * dt * 2.0;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 }
-
 
 fn update_player_animation(
     input: Res<Input<KeyCode>>,
