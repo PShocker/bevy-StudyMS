@@ -115,7 +115,7 @@ impl Plugin for PlayerPlugin {
                 Update,
                 (
                     update_flip,
-                    // update_group,
+                    update_group,
                     update_edge,
                     update_fall,
                     update_slope,
@@ -198,7 +198,7 @@ fn player(
                     // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                texture_atlas: texture_atlas_handle.clone(),
+                // texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
@@ -313,12 +313,11 @@ fn update_rise(
     let (entity, mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
     player.translation.y -= GRAVITY * dt * 2.0;
-    println!("{:?}", player.foot_hold_type);
+
     if player.foot_hold_type == FootHoldType::Vertical {
-        controller.translation = Some(Vec2::new(0.0, player.translation.y));
-    } else {
-        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
+        player.translation.x=0.0;
     }
+    controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
     if player.translation.y <= 0.0 {
         commands.entity(entity).insert(Fall);
         commands.entity(entity).remove::<Rise>();
@@ -334,15 +333,13 @@ fn update_fall(
         return;
     }
 
-    // let (mut enity, mut player, mut controller, output) = query.single_mut();
     let (mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
     player.translation.y -= GRAVITY * dt * 2.0;
     if player.foot_hold_type == FootHoldType::Vertical {
-        controller.translation = Some(Vec2::new(0.0, player.translation.y));
-    } else {
-        controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
+        player.translation.x=0.0;
     }
+    controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 }
 
 fn update_player_animation(
@@ -437,7 +434,7 @@ fn update_group(
         &mut KinematicCharacterController,
         &mut KinematicCharacterControllerOutput,
         &mut Velocity,
-    )>,
+    ),Without<DownJumpTimer>>,
 ) {
     if query.is_empty() {
         return;
@@ -445,9 +442,6 @@ fn update_group(
 
     let (entity, mut player, output, velocity) = query.single_mut();
 
-    if player.filter_groups.unwrap().memberships == Group::GROUP_5 {
-        return;
-    }
     // println!("{:?}", velocity.linvel);
     // if  output.collisions.len()>0{
 
@@ -536,22 +530,23 @@ pub fn update_ground(
 //检测碰撞地砖
 pub fn update_collision(
     mut commands: Commands,
-    mut query: Query<&mut KinematicCharacterControllerOutput, With<Player>>,
+    mut query: Query<(&mut KinematicCharacterControllerOutput,&mut Player)>,
 ) {
     if query.is_empty() {
         return;
     }
-    let output = query.single_mut();
+    let (mut output,mut player) = query.single_mut();
     if output.collisions.len() > 0 {
-        println!("{}", output.collisions.len());
         let entity = output.collisions[0].entity;
         commands.entity(entity).insert(CurrentFootHold);
+    }else {
+        //无地砖接触,更新
+        player.foot_hold_type=FootHoldType::Unknow;
     }
 }
 
 //检测人物是否走到fh边缘并下落
 pub fn update_edge(
-    time: Res<Time>,
     mut commands: Commands,
     mut query: Query<(Entity, &mut KinematicCharacterControllerOutput, &mut Player), With<Ground>>,
 ) {
