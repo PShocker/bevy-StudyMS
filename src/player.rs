@@ -198,8 +198,8 @@ fn player(
                     // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                // texture_atlas: texture_atlas_handle.clone(),
-                transform: Transform::from_xyz(0.0, 0.0, 100.0),
+                texture_atlas: texture_atlas_handle.clone(),
+                transform: Transform::from_xyz(0.0, 0.0, 800.0),
                 ..default()
             },
             animation: animate_map.get("walk").unwrap().clone(),
