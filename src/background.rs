@@ -6,7 +6,6 @@ use crate::utils::{cal_ax, cal_ay};
 #[reflect(Component)]
 pub struct BackEnity;
 
-
 #[derive(Debug, Resource)]
 pub struct BackGroundEdge {
     pub left: f32,
@@ -17,7 +16,7 @@ pub struct BackGroundPlugin;
 
 impl Plugin for BackGroundPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update,background);
+        app.add_systems(Update, background);
     }
 }
 
@@ -30,10 +29,16 @@ fn background(
     mut q_window: Query<&Window, With<PrimaryWindow>>,
     mut q_backenity: Query<Entity, With<BackEnity>>,
     asset_server: Res<AssetServer>,
+    mut last: Local<Vec3>,
 ) {
     let transform = q_transform.get_single_mut().ok().unwrap().0;
     let window = q_window.get_single_mut().ok().unwrap();
 
+    if last.eq(&transform.translation) {
+        return;
+    } else {
+        *last = transform.translation;
+    }
     
     for backenity in q_backenity.iter_mut() {
         commands.entity(backenity).despawn();
