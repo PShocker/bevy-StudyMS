@@ -141,7 +141,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
-                
+
                 commands.spawn(SpriteBundle {
                     texture: asset_server.load(
                         tiles["Resource"]["ResourceUrl"]
@@ -182,7 +182,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let background = BackGround::new(
                         id, x, y, cx, cy, rx, ry, alpha, flip_x, front, ani, types, resource,
                     );
-                    commands.spawn(background);
+                    // commands.spawn(background);
                 }
                 1 => {}
                 _ => println!("Ani Other"),
@@ -217,6 +217,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 prev: foothold["Prev"].as_i64().unwrap() as i32,
                 next: foothold["Next"].as_i64().unwrap() as i32,
                 piece: foothold["Piece"].as_i64().unwrap() as i32,
+                layer: foothold["Layer"].as_i64().unwrap() as i32,
                 id: foothold["ID"].as_i64().unwrap() as i32,
             };
             if left > min(foothold.x1, foothold.x2) {
@@ -237,7 +238,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
                 CollisionGroups::new(
-                    Group::ALL,
+                    FootHold::get_foothold_layer(foothold.layer),
                     FootHold::get_foothold_group(
                         Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                         Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
@@ -249,6 +250,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 ),
                 RigidBody::Fixed,
                 Friction::coefficient(1.0),
+                foothold,
             ));
         }
         //地图左边墙壁
