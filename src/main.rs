@@ -243,7 +243,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                     ),
                 ),
-                FootHold::get_foothold_slope(
+                FootHold::get_foothold_type(
                     Vec2::new(foothold.x1 as f32, -foothold.y1 as f32),
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),

@@ -67,7 +67,7 @@ impl FootHold {
     }
 
     //判断斜面
-    pub fn get_foothold_slope(p1: Vec2, p2: Vec2) -> FootHoldType {
+    pub fn get_foothold_type(p1: Vec2, p2: Vec2) -> FootHoldType {
         //先判断平行
         if p1.y == p2.y {
             return FootHoldType::Horizontal;

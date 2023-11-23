@@ -79,7 +79,7 @@ const PLAYER_VELOCITY_X: f32 = 300.0;
 const GRAVITY: f32 = 10.0;
 // const GRAVITY: f32 = 0.0;
 //人在地砖上对地砖的力
-const GROUND_FORCE: f32 = 1.0e-3;
+const MIN_FORCE: f32 = 1.0e-3;
 // const GROUND_FORCE: f32 = 0.0;
 
 const MAX_JUMP_HEIGHT: f32 = 7.6;
@@ -115,10 +115,6 @@ impl Plugin for PlayerPlugin {
                     .run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
-                RunFixedUpdateLoop,
-                update_player_animation.run_if(in_state(Load::PlayerFinished)),
-            )
-            .add_systems(
                 Update,
                 (
                     update_flip,
@@ -130,6 +126,7 @@ impl Plugin for PlayerPlugin {
                     update_rise,
                     update_collision,
                     update_direction,
+                    update_player_animation,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
             )
@@ -295,13 +292,13 @@ fn update_input(
                 controller.translation = Some(Vec2::new(player.translation.x, -GRAVITY))
             }
             FootHoldType::Horizontal => {
-                controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+                controller.translation = Some(Vec2::new(player.translation.x, -MIN_FORCE))
             }
             FootHoldType::Vertical => {
-                controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE))
+                controller.translation = Some(Vec2::new(player.translation.x, -MIN_FORCE))
             }
             FootHoldType::Unknow => {
-                controller.translation = Some(Vec2::new(player.translation.x, -GROUND_FORCE));
+                controller.translation = Some(Vec2::new(player.translation.x, -MIN_FORCE));
             }
         }
     }
@@ -367,26 +364,23 @@ fn update_layer(
 fn update_player_animation(
     input: Res<Input<KeyCode>>,
     mut commands: Commands,
-    mut query: Query<
-        (
-            Entity,
-            &mut Animation,
-            &mut Velocity,
-            &mut KinematicCharacterControllerOutput,
-            &mut Player,
-        ),
-        With<Player>,
-    >,
+    mut query: Query<(
+        Entity,
+        &mut Animation,
+        &mut KinematicCharacterControllerOutput,
+        &mut Player,
+    )>,
     assets: ResMut<AnimateAssets>,
     mut state_change_ev: EventWriter<StateChangeEvent>,
 ) {
     if query.is_empty() {
         return;
     }
-    let (entity, mut animation, mut velocity, mut output, mut player) = query.single_mut();
-    // println!("{}",velocity.linvel.x);
+    let (entity, mut animation, mut output, mut player) = query.single_mut();
+
     if output.desired_translation.x.abs() > 0.0 && output.grounded {
         //walk状态
+        println!("{:?}", player.foot_hold_type);
         if animation.name != "walk" {
             commands
                 .entity(entity)
@@ -413,8 +407,6 @@ fn update_player_animation(
         }
     } else {
         //jump状态
-        // *animation = assets.animate_map.get("jump").unwrap().clone();
-        // println!("{:?},{:?}", velocity.linvel,output.desired_translation.y.abs());
         if animation.name != "jump" {
             commands
                 .entity(entity)
@@ -472,7 +464,7 @@ fn update_group(
         group.memberships = Group::GROUP_1;
         //下落的时候允许所有的layer进行碰撞
         if !output.grounded {
-            group.filters=Group::ALL;
+            group.filters = Group::ALL;
         }
     }
     if output.desired_translation.y >= 0.0 {
@@ -563,7 +555,7 @@ pub fn update_collision(
         commands.entity(entity).insert(CurrentFootHold);
     } else {
         //无地砖接触,更新
-        player.foot_hold_type = FootHoldType::Unknow;
+        // player.foot_hold_type = FootHoldType::Unknow;
     }
 }
 
