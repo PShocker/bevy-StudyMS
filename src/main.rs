@@ -257,7 +257,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 Vec2::new(left as f32, -10000.0),
                 Vec2::new(left as f32, 10000.0),
             ),
+            RigidBody::Fixed,
             FootHoldType::Vertical,
+            CollisionGroups::new(Group::ALL, Group::ALL),
         ));
         //地图右边墙壁
         commands.spawn((
@@ -265,7 +267,9 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 Vec2::new(right as f32, -10000.0),
                 Vec2::new(right as f32, 10000.0),
             ),
+            RigidBody::Fixed,
             FootHoldType::Vertical,
+            CollisionGroups::new(Group::ALL, Group::ALL),
         ));
     }
 }

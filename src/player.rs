@@ -320,6 +320,7 @@ fn update_rise(
     let dt = time.delta_seconds();
     player.translation.y -= GRAVITY * dt * 2.0;
 
+    // println!("{:?}", player.foot_hold_type);
     if player.foot_hold_type == FootHoldType::Vertical {
         player.translation.x = 0.0;
     }
@@ -553,6 +554,7 @@ pub fn update_collision(
     }
     let (mut output, mut player) = query.single_mut();
     if output.collisions.len() > 0 {
+        // println!("{}", output.collisions.len());
         let entity = output.collisions[0].entity;
         commands.entity(entity).insert(CurrentFootHold);
     } else {
@@ -589,6 +591,7 @@ pub fn update_foothold(
     let (mut entity, mut foot_hold_type, mut foothold) = q_hold.single();
     let mut player = q_player.single_mut();
     player.foot_hold_type = foot_hold_type.clone();
+    println!("{:?}", player.foot_hold_type);
     player.layer = foothold.layer;
     commands.entity(entity).remove::<CurrentFootHold>();
 }
