@@ -56,8 +56,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     //解析背景的json文件,从Layer开始
     let mut i = 0;
     for value in res["Layers"].as_array().unwrap() {
-        // println!("{:?}", value);
-        i += 1;
         //i相当于layer,越大的i会覆盖较小的i值的物体
         if value["Objs"].as_array() != None {
             for objs in value["Objs"].as_array().unwrap() {
@@ -157,6 +155,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 });
             }
         }
+        i += 1;
     }
     //解析地图Backs
     for backs in res["Backs"].as_array().unwrap() {
@@ -249,7 +248,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     Vec2::new(foothold.x2 as f32, -foothold.y2 as f32),
                 ),
                 RigidBody::Fixed,
-                Friction::coefficient(1.0),
                 foothold,
             ));
         }

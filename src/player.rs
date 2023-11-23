@@ -1,6 +1,7 @@
 use crate::{
     animate::{Animation, AnimationIndices, AnimationTimer},
-    foothold::{self, FootHold, FootHoldType}, utils::composite_zindex,
+    foothold::{self, FootHold, FootHoldType},
+    utils::composite_zindex,
 };
 use bevy::{app::RunFixedUpdateLoop, asset::LoadState, prelude::*, utils::HashMap};
 use bevy_rapier2d::{na::ComplexField, prelude::*};
@@ -83,6 +84,10 @@ const GROUND_FORCE: f32 = 1.0e-3;
 
 const MAX_JUMP_HEIGHT: f32 = 7.6;
 
+const MAX_LAYER: i32 = 16;
+
+const MAX_FALL_SPEED: f32 = 8.0;
+
 #[derive(Debug, Component, Clone, Default)]
 pub struct Ground;
 #[derive(Debug, Component, Clone, Default)]
@@ -106,7 +111,8 @@ impl Plugin for PlayerPlugin {
             )
             .add_systems(
                 PreUpdate,
-                (update_ground,update_layer,update_foothold).run_if(in_state(Load::PlayerFinished)),
+                (update_ground, update_layer, update_foothold)
+                    .run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
                 RunFixedUpdateLoop,
@@ -221,7 +227,6 @@ fn player(
                 ..default()
             },
         },
-        Friction::coefficient(1.0),
         Ccd::enabled(),
         Fall,
     ));
@@ -314,7 +319,6 @@ fn update_rise(
     let (entity, mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
     player.translation.y -= GRAVITY * dt * 2.0;
-    // player.layer=64;
 
     if player.foot_hold_type == FootHoldType::Vertical {
         player.translation.x = 0.0;
@@ -338,9 +342,11 @@ fn update_fall(
     let (mut player, mut controller) = query.single_mut();
     let dt = time.delta_seconds();
     player.translation.y -= GRAVITY * dt * 2.0;
-    // player.layer=64;
     if player.foot_hold_type == FootHoldType::Vertical {
         player.translation.x = 0.0;
+    }
+    if player.translation.y < -MAX_FALL_SPEED {
+        player.translation.y = -MAX_FALL_SPEED;
     }
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 }
@@ -354,7 +360,7 @@ fn update_layer(
     }
 
     let (mut player, mut transform) = query.single_mut();
-    transform.translation.z=composite_zindex(player.layer.into(),1,1,1);
+    transform.translation.z = composite_zindex(player.layer.into(), 1, 1, 1);
     // println!("{}", player.layer);
 }
 
@@ -461,9 +467,13 @@ fn update_group(
 
     let (entity, mut controller, output, player) = query.single_mut();
     let filter = FootHold::get_foothold_layer(player.layer);
-    let mut group = CollisionGroups::new(Group::GROUP_1, Group::ALL);
+    let mut group = CollisionGroups::new(Group::GROUP_1, filter);
     if output.desired_translation.y < 0.0 {
         group.memberships = Group::GROUP_1;
+        //下落的时候允许所有的layer进行碰撞
+        if !output.grounded {
+            group.filters=Group::ALL;
+        }
     }
     if output.desired_translation.y >= 0.0 {
         group.memberships = Group::GROUP_2;
