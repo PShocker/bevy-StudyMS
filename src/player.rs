@@ -355,7 +355,7 @@ fn update_layer(
 
     let (mut player, mut transform) = query.single_mut();
     transform.translation.z=composite_zindex(player.layer.into(),1,1,1);
-    println!("{}", player.layer);
+    // println!("{}", player.layer);
 }
 
 fn update_player_animation(

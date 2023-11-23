@@ -182,7 +182,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let background = BackGround::new(
                         id, x, y, cx, cy, rx, ry, alpha, flip_x, front, ani, types, resource,
                     );
-                    // commands.spawn(background);
+                    commands.spawn(background);
                 }
                 1 => {}
                 _ => println!("Ani Other"),

@@ -83,9 +83,6 @@ impl FootHold {
     //判断Layer
     pub fn get_foothold_layer(layer: i32) -> Group {
         match layer {
-            -1 => {
-                return Group::ALL;
-            }
             0 => {
                 return Group::GROUP_1;
             }
