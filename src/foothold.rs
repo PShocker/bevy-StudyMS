@@ -1,3 +1,5 @@
+use std::default;
+
 use bevy::{prelude::*, render::render_phase::PhaseItem, window::PrimaryWindow};
 use bevy_rapier2d::geometry::Group;
 
@@ -10,10 +12,11 @@ pub struct FootHold {
     pub prev: i32,
     pub next: i32,
     pub piece: i32,
+    pub layer: i32,
     pub id: i32,
 }
 
-#[derive(Debug, Component, Clone,PartialEq,Default)]
+#[derive(Debug, Component, Clone, PartialEq, Default)]
 pub enum FootHoldType {
     #[default]
     Slope,
@@ -64,7 +67,7 @@ impl FootHold {
     }
 
     //判断斜面
-    pub fn get_foothold_slope(p1: Vec2, p2: Vec2) -> FootHoldType {
+    pub fn get_foothold_type(p1: Vec2, p2: Vec2) -> FootHoldType {
         //先判断平行
         if p1.y == p2.y {
             return FootHoldType::Horizontal;
@@ -75,5 +78,29 @@ impl FootHold {
         }
         //斜面
         return FootHoldType::Slope;
+    }
+
+    //判断Layer
+    pub fn get_foothold_layer(layer: i32) -> Group {
+        match layer {
+            0 => {
+                return Group::GROUP_1;
+            }
+            1 => {
+                return Group::GROUP_2;
+            }
+            2 => {
+                return Group::GROUP_3;
+            }
+            3 => {
+                return Group::GROUP_4;
+            }
+            4 => {
+                return Group::GROUP_5;
+            }
+            default=>{
+                return Group::ALL;
+            }
+        }
     }
 }
