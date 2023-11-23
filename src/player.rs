@@ -115,6 +115,10 @@ impl Plugin for PlayerPlugin {
                     .run_if(in_state(Load::PlayerFinished)),
             )
             .add_systems(
+                RunFixedUpdateLoop,
+                update_player_animation.run_if(in_state(Load::PlayerFinished)),
+            )
+            .add_systems(
                 Update,
                 (
                     update_flip,
@@ -126,7 +130,6 @@ impl Plugin for PlayerPlugin {
                     update_rise,
                     update_collision,
                     update_direction,
-                    update_player_animation,
                 )
                     .run_if(in_state(Load::PlayerFinished)), //先读取人物动画,否则会导致读取失败
             )
