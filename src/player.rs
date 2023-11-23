@@ -380,7 +380,6 @@ fn update_player_animation(
 
     if output.desired_translation.x.abs() > 0.0 && output.grounded {
         //walk状态
-        println!("{:?}", player.foot_hold_type);
         if animation.name != "walk" {
             commands
                 .entity(entity)
