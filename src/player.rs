@@ -204,7 +204,7 @@ fn player(
                     // anchor: bevy::sprite::Anchor::Custom(Vec2::new(0.0, -0.5)),
                     ..default()
                 },
-                // texture_atlas: texture_atlas_handle.clone(),
+                texture_atlas: texture_atlas_handle.clone(),
                 transform: Transform::from_xyz(0.0, 0.0, 100.0),
                 ..default()
             },
@@ -334,10 +334,7 @@ fn update_rise(
 fn update_fall(
     time: Res<Time>,
     mut commands: Commands,
-    mut query: Query<
-        (&mut Player, &mut KinematicCharacterController),
-        With<Fall>,
-    >,
+    mut query: Query<(&mut Player, &mut KinematicCharacterController), With<Fall>>,
 ) {
     if query.is_empty() {
         return;
@@ -352,6 +349,7 @@ fn update_fall(
     if player.translation.y < -MAX_FALL_SPEED {
         player.translation.y = -MAX_FALL_SPEED;
     }
+    player.layer = -1;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 
     // let mut group = CollisionGroups::new(Group::GROUP_1, Group::ALL);
@@ -374,8 +372,9 @@ fn update_layer(
     }
 
     let (mut player, mut transform) = query.single_mut();
-    transform.translation.z = composite_zindex(player.layer.into(), 1, 1, 1);
-    // println!("{}", player.layer);
+    if player.layer != -1 {
+        transform.translation.z = composite_zindex(player.layer.into(), 1, 1, 1);
+    }
 }
 
 fn update_player_animation(
@@ -454,7 +453,6 @@ fn update_downjump(
     if timer.0.tick(time.delta()).just_finished() {
         controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
         commands.entity(entity).remove::<DownJumpTimer>();
-        println!("remove")
     } else {
         controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
     }
