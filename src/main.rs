@@ -107,7 +107,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                             .push(frames["Delay"].as_i64().unwrap() as f32);
                     }
                     //产生组件,animate_back处理动画效果
-                    commands.spawn(animationsprite);
+                    // commands.spawn(animationsprite);
                 }
             }
         }
@@ -140,19 +140,19 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 // println!("{} and {} and {}", x, y, z);
                 // println!("{} and {}", tiles["ID"].as_i64().unwrap(), z);
 
-                commands.spawn(SpriteBundle {
-                    texture: asset_server.load(
-                        tiles["Resource"]["ResourceUrl"]
-                            .to_string()
-                            .replace("\"", ""),
-                    ),
-                    transform: Transform::from_xyz(x, y, z),
-                    sprite: Sprite {
-                        anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
-                        ..default()
-                    },
-                    ..default()
-                });
+                // commands.spawn(SpriteBundle {
+                //     texture: asset_server.load(
+                //         tiles["Resource"]["ResourceUrl"]
+                //             .to_string()
+                //             .replace("\"", ""),
+                //     ),
+                //     transform: Transform::from_xyz(x, y, z),
+                //     sprite: Sprite {
+                //         anchor: bevy::sprite::Anchor::Custom(Vec2::new(ox, oy)),
+                //         ..default()
+                //     },
+                //     ..default()
+                // });
             }
         }
         i += 1;
@@ -181,7 +181,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                     let background = BackGround::new(
                         id, x, y, cx, cy, rx, ry, alpha, flip_x, front, ani, types, resource,
                     );
-                    commands.spawn(background);
+                    // commands.spawn(background);
                 }
                 1 => {}
                 _ => println!("Ani Other"),
