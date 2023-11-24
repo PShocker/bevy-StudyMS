@@ -103,4 +103,8 @@ impl FootHold {
             }
         }
     }
+    //当人物在空中,获取人物落点的地砖layer
+    pub fn get_bottom_layer(p: Vec2) -> i32 {
+        0
+    }
 }

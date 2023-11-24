@@ -349,7 +349,18 @@ fn update_fall(
     if player.translation.y < -MAX_FALL_SPEED {
         player.translation.y = -MAX_FALL_SPEED;
     }
+    player.layer = -1;
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
+
+    // let mut group = CollisionGroups::new(Group::GROUP_1, Group::ALL);
+    // if player.translation.x >= 0.0 {
+    //     group.memberships = group.memberships | Group::GROUP_3;
+    // }
+    // if player.translation.x <= 0.0 {
+    //     group.memberships = group.memberships | Group::GROUP_4;
+    // }
+
+    // controller.filter_groups = Some(group);
 }
 
 fn update_layer(
@@ -361,8 +372,9 @@ fn update_layer(
     }
 
     let (mut player, mut transform) = query.single_mut();
-    transform.translation.z = composite_zindex(player.layer.into(), 1, 1, 1);
-    // println!("{}", player.layer);
+    if player.layer != -1 {
+        transform.translation.z = composite_zindex(player.layer.into(), 1, 1, 1);
+    }
 }
 
 fn update_player_animation(
@@ -429,6 +441,7 @@ fn update_downjump(
             Entity,
             &mut DownJumpTimer,
             &mut KinematicCharacterController,
+            &mut Player,
         ),
         With<Player>,
     >,
@@ -436,23 +449,19 @@ fn update_downjump(
     if query.is_empty() {
         return;
     }
-    let (entity, mut timer, mut controller) = query.single_mut();
-    controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
+    let (entity, mut timer, mut controller, mut player) = query.single_mut();
     if timer.0.tick(time.delta()).just_finished() {
         controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_1, Group::ALL));
         commands.entity(entity).remove::<DownJumpTimer>();
+    } else {
+        controller.filter_groups = Some(CollisionGroups::new(Group::GROUP_5, Group::ALL));
     }
 }
 
 fn update_group(
     mut commands: Commands,
     mut query: Query<
-        (
-            Entity,
-            &mut KinematicCharacterController,
-            &mut KinematicCharacterControllerOutput,
-            &mut Player,
-        ),
+        (Entity, &mut KinematicCharacterController, &mut Player),
         Without<DownJumpTimer>,
     >,
 ) {
@@ -460,24 +469,20 @@ fn update_group(
         return;
     }
 
-    let (entity, mut controller, output, player) = query.single_mut();
+    let (entity, mut controller, player) = query.single_mut();
     let filter = FootHold::get_foothold_layer(player.layer);
     let mut group = CollisionGroups::new(Group::GROUP_1, filter);
-    if output.desired_translation.y < 0.0 {
+    if player.translation.y <= 0.0 {
         group.memberships = Group::GROUP_1;
-        //下落的时候允许所有的layer进行碰撞
-        if !output.grounded {
-            group.filters = Group::ALL;
-        }
     }
-    if output.desired_translation.y >= 0.0 {
+    if player.translation.y > 0.0 {
         group.memberships = Group::GROUP_2;
     }
 
-    if output.desired_translation.x >= 0.0 {
+    if player.translation.x >= 0.0 {
         group.memberships = group.memberships | Group::GROUP_3;
     }
-    if output.desired_translation.x <= 0.0 {
+    if player.translation.x <= 0.0 {
         group.memberships = group.memberships | Group::GROUP_4;
     }
 
@@ -539,6 +544,7 @@ pub fn update_ground(
     if output.grounded {
         commands.entity(entity).insert(Ground);
         commands.entity(entity).remove::<Fall>();
+        player.translation.y = 0.0;
     } else {
         commands.entity(entity).remove::<Ground>();
     }
@@ -591,7 +597,7 @@ pub fn update_foothold(
     let (mut entity, mut foot_hold_type, mut foothold) = q_hold.single();
     let mut player = q_player.single_mut();
     player.foot_hold_type = foot_hold_type.clone();
-    println!("{:?}", player.foot_hold_type);
+    // println!("{:?}", player.foot_hold_type);
     player.layer = foothold.layer;
     commands.entity(entity).remove::<CurrentFootHold>();
 }
