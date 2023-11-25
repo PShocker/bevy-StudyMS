@@ -84,8 +84,6 @@ const MIN_FORCE: f32 = 1.0e-3;
 
 const MAX_JUMP_HEIGHT: f32 = 7.6;
 
-const MAX_LAYER: i32 = 16;
-
 const MAX_FALL_SPEED: f32 = 8.0;
 
 #[derive(Debug, Component, Clone, Default)]
@@ -350,6 +348,7 @@ fn update_fall(
         player.translation.y = -MAX_FALL_SPEED;
     }
     player.layer = -1;
+    // println!("{}", player.translation.y);
     controller.translation = Some(Vec2::new(player.translation.x, player.translation.y));
 
     // let mut group = CollisionGroups::new(Group::GROUP_1, Group::ALL);
@@ -544,7 +543,6 @@ pub fn update_ground(
     if output.grounded {
         commands.entity(entity).insert(Ground);
         commands.entity(entity).remove::<Fall>();
-        player.translation.y = 0.0;
     } else {
         commands.entity(entity).remove::<Ground>();
     }
@@ -560,9 +558,13 @@ pub fn update_collision(
     }
     let (mut output, mut player) = query.single_mut();
     if output.collisions.len() > 0 {
-        // println!("{}", output.collisions.len());
-        let entity = output.collisions[0].entity;
-        commands.entity(entity).insert(CurrentFootHold);
+        for i in &output.collisions {
+            let entity = i.entity;
+            commands.entity(entity).insert(CurrentFootHold);
+        }
+        // println!("{:?}", output.collisions[0]);
+        // let entity = output.collisions[0].entity;
+        // commands.entity(entity).insert(CurrentFootHold);
     } else {
         //无地砖接触,更新
         // player.foot_hold_type = FootHoldType::Unknow;
@@ -594,12 +596,16 @@ pub fn update_foothold(
     if q_hold.is_empty() || q_player.is_empty() {
         return;
     }
-    let (mut entity, mut foot_hold_type, mut foothold) = q_hold.single();
+    // let (mut entity, mut foot_hold_type, mut foothold) = q_hold.single();
     let mut player = q_player.single_mut();
-    player.foot_hold_type = foot_hold_type.clone();
+    for (entity, foot_hold_type, foothold) in q_hold.iter() {
+        // println!("{:?}", player.foot_hold_type);
+        player.foot_hold_type = foot_hold_type.clone();
+        player.layer = foothold.layer;
+        commands.entity(entity).remove::<CurrentFootHold>();
+    }
+    //
     // println!("{:?}", player.foot_hold_type);
-    player.layer = foothold.layer;
-    commands.entity(entity).remove::<CurrentFootHold>();
 }
 
 fn setup_player_assets(

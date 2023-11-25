@@ -33,7 +33,7 @@ fn main() {
                 ..default()
             }),
             RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0),
-            RapierDebugRenderPlugin::default(), //显示碰撞线
+            // RapierDebugRenderPlugin::default(), //显示碰撞线
         ))
         .add_plugins(PlayerPlugin) //人物
         .add_plugins(CameraPlugin) //镜头跟随
@@ -260,6 +260,17 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             RigidBody::Fixed,
             FootHoldType::Vertical,
             CollisionGroups::new(Group::ALL, Group::ALL),
+            FootHold {
+                x1: left,
+                x2: left,
+                y1: 10000,
+                y2: 10000,
+                prev: -1,
+                next: -1,
+                piece: -1,
+                layer: -1,
+                id: -1,
+            },
         ));
         //地图右边墙壁
         commands.spawn((
@@ -270,6 +281,17 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             RigidBody::Fixed,
             FootHoldType::Vertical,
             CollisionGroups::new(Group::ALL, Group::ALL),
+            FootHold {
+                x1: right,
+                x2: right,
+                y1: 10000,
+                y2: 10000,
+                prev: -1,
+                next: -1,
+                piece: -1,
+                layer: -1,
+                id: -1,
+            },
         ));
     }
 }
